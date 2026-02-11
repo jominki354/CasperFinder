@@ -235,12 +235,13 @@ def build_settings_tab(app, container):
         text_color=Colors.ACCENT,
     ).pack(side="left")
 
-    ctk.CTkLabel(
+    deer_label = ctk.CTkLabel(
         ver_row,
         text="  from 사슴",
         font=ctk.CTkFont(size=12, slant="italic"),
         text_color=Colors.TEXT_SUB,
-    ).pack(side="left")
+    )
+    deer_label.pack(side="left")
 
     # 업데이트 확인 행
     update_row = ctk.CTkFrame(card_info, fg_color="transparent")
@@ -256,7 +257,6 @@ def build_settings_tab(app, container):
 
     def _check_update():
         update_status.configure(text="확인 중...", text_color=Colors.TEXT_SUB)
-        # 기존 다운로드 버튼 제거
         for w in update_row.winfo_children():
             if isinstance(w, ctk.CTkButton) and getattr(w, "_is_dl_btn", False):
                 w.destroy()
@@ -272,7 +272,6 @@ def build_settings_tab(app, container):
                         text=f"새 버전 {latest_ver} 사용 가능!",
                         text_color=Colors.SUCCESS,
                     )
-                    # 다운로드 버튼 추가
                     from ui.components.update_dialog import UpdateDialog
 
                     dl_btn = ctk.CTkButton(
@@ -315,9 +314,9 @@ def build_settings_tab(app, container):
         command=_check_update,
     ).pack(side="right")
 
-    # ── 더미 데이터 생성 (테스트) ──
+    # ── 더미 데이터 (이스터에그: "from 사슴" 7회 클릭 시 토글) ──
     btn_row = ctk.CTkFrame(frame, fg_color="transparent")
-    btn_row.pack(fill="x", padx=20, pady=(10, 0))
+    # 초기에는 숨김
 
     ctk.CTkButton(
         btn_row,
@@ -335,3 +334,18 @@ def build_settings_tab(app, container):
             get_dummy_vehicle(), "테스트", "https://casper.hyundai.com"
         ),
     ).pack(side="right")
+
+    app._deer_click_count = 0
+    app._dummy_visible = False
+
+    def _on_deer_click(event):
+        app._deer_click_count += 1
+        if app._deer_click_count >= 7:
+            app._deer_click_count = 0
+            app._dummy_visible = not app._dummy_visible
+            if app._dummy_visible:
+                btn_row.pack(fill="x", padx=20, pady=(10, 0))
+            else:
+                btn_row.pack_forget()
+
+    deer_label.bind("<Button-1>", _on_deer_click)

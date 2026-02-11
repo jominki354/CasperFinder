@@ -389,11 +389,25 @@ class CasperFinderApp(ctk.CTk):
         # 4) 작업표시줄 깜박임 (새 차량 발견 시)
         if flash and count > 0:
             try:
-                hwnd = ctypes.windll.user32.GetForegroundWindow()
-                this_hwnd = self.winfo_id()
-                # 백그라운드일 때만 깜박임
-                if hwnd != this_hwnd:
-                    ctypes.windll.user32.FlashWindow(this_hwnd, True)
+                hwnd = ctypes.windll.user32.GetParent(self.winfo_id())
+
+                # FLASHW_ALL(3) | FLASHW_TIMERNOFG(12) = 15
+                class FLASHWINFO(ctypes.Structure):
+                    _fields_ = [
+                        ("cbSize", ctypes.c_uint),
+                        ("hwnd", ctypes.c_void_p),
+                        ("dwFlags", ctypes.c_uint),
+                        ("uCount", ctypes.c_uint),
+                        ("dwTimeout", ctypes.c_uint),
+                    ]
+
+                fwi = FLASHWINFO()
+                fwi.cbSize = ctypes.sizeof(FLASHWINFO)
+                fwi.hwnd = hwnd
+                fwi.dwFlags = 15  # FLASHW_ALL | FLASHW_TIMERNOFG
+                fwi.uCount = 5
+                fwi.dwTimeout = 0
+                ctypes.windll.user32.FlashWindowEx(ctypes.byref(fwi))
             except Exception:
                 pass
 
@@ -653,9 +667,8 @@ class CasperFinderApp(ctk.CTk):
                 )
 
         self.after(0, _add)
-        # 뱃지 업데이트 (현재 탭이 차량검색이 아닐 때만 카운트 증가)
-        if self.current_tab != 0:
-            self._new_vehicle_count += 1
+        # 뱃지 업데이트 (항상 카운트 증가)
+        self._new_vehicle_count += 1
         self._update_badge(flash=True)
         self._schedule_alert()
 

@@ -33,27 +33,28 @@
 
 1.  **애플리케이션 버전 (`core/version.py`)**
     ```python
-    APP_VERSION = "0.0.2"  # 변경할 버전
+    APP_VERSION = "X.X.X"  # 변경할 버전
     ```
 
 2.  **인스톨러 버전 (`installer.iss`)**
     ```pascal
-    #define MyAppVersion "0.0.2"  ; 변경할 버전
+    #define MyAppVersion "X.X.X"  ; 변경할 버전
     ```
 
 ---
 
 ## 2. 실행 파일 빌드 (Build Executable)
 
-PyInstaller를 사용하여 Python 코드를 단일 실행 파일(폴더 방식)로 변환합니다.
+PyInstaller를 사용하여 Python 코드를 **단일 EXE**(onefile 모드)로 변환합니다.
 
 ```powershell
 # 프로젝트 루트(e:\CasperFinder)에서 실행
 pyinstaller CasperFinder.spec --clean --noconfirm
 ```
 
-- **결과물:** `dist/CasperFinder/` 디렉토리 (내부에 `CasperFinder.exe` 포함)
+- **결과물:** `dist/CasperFinder.exe` (단일 실행 파일)
 - **참고:** `CasperFinder.spec` 파일에 `assets`, `constants` 등 리소스 포함 설정이 이미 되어 있습니다.
+- **onefile 모드**: 설치 폴더에 `.pyc` 소스 구조가 노출되지 않습니다.
 
 ---
 
@@ -88,12 +89,13 @@ Get-ChildItem -Path "C:\Users\$env:USERNAME\AppData\Local\Programs" -Filter "ISC
 
 ## 4. 최종 확인 및 배포
 
-1.  **테스트:** 생성된 `CasperFinder-Setup-v0.0.2.exe`를 실행하여 정상적으로 설치되고 실행되는지 확인합니다.
+1.  **테스트:** 생성된 `CasperFinder-Setup-vX.X.X.exe`를 실행하여 정상적으로 설치되고 실행되는지 확인합니다.
 2.  **배포:** GitHub Releases 등에 업로드합니다.
-3.  **Git 태그 생성:**
+3.  **Git 커밋 및 태그 생성:**
     ```powershell
-    git tag v0.0.2
-    git push origin v0.0.2
+    git add . && git commit -m "vX.X.X: 릴리즈 설명"
+    git tag vX.X.X
+    git push origin main --tags
     ```
 
 ## 5. 전체 자동화 스크립트 예시
