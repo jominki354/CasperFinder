@@ -14,11 +14,20 @@ datas = [
 # 만약 기본 config.json이 필요하다면 포함 (사용자 데이터와는 별개)
 if os.path.exists('config.json'):
     datas.append(('config.json', '.'))
+import sys
+
+# Python DLL 경로 (vcruntime 포함)
+python_dir = os.path.dirname(sys.executable)
+binaries = []
+for dll in ['python310.dll', 'vcruntime140.dll', 'vcruntime140_1.dll']:
+    dll_path = os.path.join(python_dir, dll)
+    if os.path.exists(dll_path):
+        binaries.append((dll_path, '.'))
 
 a = Analysis(
     ['main.py'],
     pathex=[],
-    binaries=[],
+    binaries=binaries,
     datas=datas,
     hiddenimports=[],
     hookspath=[],
