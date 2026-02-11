@@ -1,4 +1,5 @@
 import os
+import ctypes
 import customtkinter as ctk
 from datetime import datetime
 from PIL import Image
@@ -50,6 +51,7 @@ class CasperFinderApp(ctk.CTk):
         self.engine.on_poll_count = self._on_poll_count
 
         self.notification_count = 0
+        self._new_vehicle_count = 0  # 뱃지용 신규 차량 수
         self.vehicles_found = []
         self.vehicle_widget_map = {}  # {car_id: widget}
         self.sort_key = "price_high"  # 기본: 높은가격순
@@ -115,9 +117,15 @@ class CasperFinderApp(ctk.CTk):
             # 스플래시 이후 표시를 위해 지연 deiconify
             self.after(2000, self.deiconify)
 
-        # ── 자동 업데이트 확인 후 시작 ──
+        # ── 자동 업데이트 확인 ──
         self.after(500, self._check_update_on_start)
-        self.after(100, self.engine.start)
+
+        # ── 자동 검색 시작 여부 ──
+        if app_settings.get("autoSearch", True):
+            self.after(100, self._start_polling)
+        else:
+            # 대기 상태로 시작 (버튼: "시작")
+            pass
 
     def _show_splash(self):
         splash_path = os.path.join(str(BASE_DIR), "assets", "splash.png")
@@ -218,9 +226,14 @@ class CasperFinderApp(ctk.CTk):
         ).pack(padx=12, anchor="w")
 
         self.nav_buttons = []
+        self._badge_label = None
         for text, idx in [("차량검색", 0), ("조건설정", 1)]:
+            # 차량검색 버튼은 뱃지를 위해 컨테이너 프레임 사용
+            btn_container = ctk.CTkFrame(self.nav_frame, fg_color="transparent")
+            btn_container.pack(fill="x", padx=8, pady=1)
+
             btn = ctk.CTkButton(
-                self.nav_frame,
+                btn_container,
                 text=f"  {text}",
                 font=ctk.CTkFont(size=15),
                 fg_color="transparent",
@@ -231,7 +244,23 @@ class CasperFinderApp(ctk.CTk):
                 corner_radius=6,
                 command=lambda i=idx: self._switch_tab(i),
             )
-            btn.pack(fill="x", padx=8, pady=1)
+            btn.pack(fill="x", side="left", expand=True)
+
+            # 차량검색(idx==0) 메뉴에 뱃지 라벨 추가
+            if idx == 0:
+                badge = ctk.CTkLabel(
+                    btn_container,
+                    text="",
+                    width=24,
+                    height=20,
+                    corner_radius=10,
+                    fg_color=Colors.ERROR,
+                    text_color="white",
+                    font=ctk.CTkFont(size=11, weight="bold"),
+                )
+                # 초기엔 숨김
+                self._badge_label = badge
+
             self.nav_buttons.append(btn)
 
         ctk.CTkFrame(self.nav_frame, fg_color="transparent").pack(
@@ -302,6 +331,11 @@ class CasperFinderApp(ctk.CTk):
             else:
                 btn.configure(fg_color="transparent", text_color=Colors.TEXT_SUB)
 
+        # 차량검색 탭(0)에 진입하면 뱃지 초기화
+        if idx == 0:
+            self._new_vehicle_count = 0
+            self._update_badge()
+
         # 기존 페이지 숨기기
         for f in self.page_frames.values():
             f.pack_forget()
@@ -316,6 +350,52 @@ class CasperFinderApp(ctk.CTk):
 
         # 페이지 표시
         self.page_frames[idx].pack(fill="both", expand=True)
+
+    # ═══════════════════════════════════════
+    # 뱃지 갱신 (타이틀/메뉴/트레이/작업표시줄)
+    # ═══════════════════════════════════════
+    def _update_badge(self, flash=False):
+        count = self._new_vehicle_count
+        total = len(self.vehicles_found)
+
+        # 1) 타이틀바
+        if count > 0:
+            self.title(f"CasperFinder  —  🔔 {count}대 새 차량!")
+        elif total > 0:
+            self.title(f"CasperFinder  —  총 {total}대")
+        else:
+            self.title("CasperFinder")
+
+        # 2) 차량검색 메뉴 뱃지 라벨
+        if self._badge_label:
+            if count > 0:
+                self._badge_label.configure(text=f" {count} ")
+                self._badge_label.pack(side="right", padx=(0, 4))
+            else:
+                self._badge_label.pack_forget()
+
+        # 3) 트레이 아이콘 툴팁
+        try:
+            if self.tray._icon:
+                if count > 0:
+                    self.tray._icon.title = f"CasperFinder — 🔔 {count}대 새 차량 발견!"
+                elif total > 0:
+                    self.tray._icon.title = f"CasperFinder — 총 {total}대 발견"
+                else:
+                    self.tray._icon.title = "CasperFinder — 캐스퍼 기획전 알리미"
+        except Exception:
+            pass
+
+        # 4) 작업표시줄 깜박임 (새 차량 발견 시)
+        if flash and count > 0:
+            try:
+                hwnd = ctypes.windll.user32.GetForegroundWindow()
+                this_hwnd = self.winfo_id()
+                # 백그라운드일 때만 깜박임
+                if hwnd != this_hwnd:
+                    ctypes.windll.user32.FlashWindow(this_hwnd, True)
+            except Exception:
+                pass
 
     # ═══════════════════════════════════════
     # 폴링 제어
@@ -406,6 +486,7 @@ class CasperFinderApp(ctk.CTk):
                 )
 
             self.after(0, _update)
+            self.after(50, self._update_badge)
 
     # ═══════════════════════════════════════
     # 위젯 풀 & 증분 렌더링
@@ -572,6 +653,10 @@ class CasperFinderApp(ctk.CTk):
                 )
 
         self.after(0, _add)
+        # 뱃지 업데이트 (현재 탭이 차량검색이 아닐 때만 카운트 증가)
+        if self.current_tab != 0:
+            self._new_vehicle_count += 1
+        self._update_badge(flash=True)
         self._schedule_alert()
 
     def focus_on_vehicle(self, car_id):

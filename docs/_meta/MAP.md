@@ -58,7 +58,9 @@ e:\CasperFinder\
 │       ├── STYLE.md         # 코드 DNA
 │       ├── UIUX.md          # 디자인 DNA
 │       ├── LOG.md           # 변경 이력
-│       └── ANALYSIS.md      # API 분석 문서
+│       ├── LOG.md           # 변경 이력
+       └── ANALYSIS.md      # API 분석 문서
+    ├── DEPLOY.md            # 배포/빌드 가이드 (PyInstaller + Inno Setup)
 │
 ├── download_colors.py       # 색상 이미지 다운로드 유틸
 └── test_api.py              # API 테스트 스크립트

@@ -28,6 +28,7 @@ def build_settings_tab(app, container):
         {
             "autoStart": False,
             "startMinimized": False,
+            "autoSearch": True,
             "updateNotify": True,
             "soundEnabled": True,
             "soundVolume": 80,
@@ -41,6 +42,7 @@ def build_settings_tab(app, container):
         cfg["appSettings"] = {
             "autoStart": app.auto_start_var.get(),
             "startMinimized": app.tray_start_var.get(),
+            "autoSearch": app.auto_search_var.get(),
             "updateNotify": app.update_notify_var.get(),
             "soundEnabled": app.sound_enabled_var.get(),
             "soundVolume": int(app.sound_volume_var.get()),
@@ -85,6 +87,17 @@ def build_settings_tab(app, container):
         card_app,
         text="프로그램 시작 시 트레이로 시작",
         variable=app.tray_start_var,
+        font=ctk.CTkFont(size=12),
+        width=20,
+        height=20,
+    ).pack(padx=14, pady=5, anchor="w")
+
+    app.auto_search_var = ctk.BooleanVar(value=app_settings.get("autoSearch", True))
+    app.auto_search_var.trace_add("write", _on_setting_changed)
+    ctk.CTkCheckBox(
+        card_app,
+        text="프로그램 시작 시 바로 차량검색",
+        variable=app.auto_search_var,
         font=ctk.CTkFont(size=12),
         width=20,
         height=20,

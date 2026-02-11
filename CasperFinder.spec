@@ -2,8 +2,6 @@
 import os
 import customtkinter
 
-block_cipher = None
-
 # CustomTkinter 경로 확인
 ctk_path = os.path.dirname(customtkinter.__file__)
 
@@ -27,24 +25,26 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
+pyz = PYZ(a.pure, a.zipped_data)
 
+# ─── onefile 모드: 단일 EXE 생성 ───
+# 설치 폴더에 소스 구조가 노출되지 않음
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,        # onefile: binaries를 EXE에 포함
+    a.zipfiles,        # onefile: zipfiles를 EXE에 포함
+    a.datas,           # onefile: datas를 EXE에 포함
     [],
-    exclude_binaries=True,
     name='CasperFinder',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
+    upx_exclude=[],
     console=False,  # GUI 전용 (콘솔 창 숨김)
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -54,13 +54,4 @@ exe = EXE(
     icon='assets/app_icon.ico' if os.path.exists('assets/app_icon.ico') else None,
 )
 
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='CasperFinder',
-)
+# onefile 모드에서는 COLLECT 불필요
