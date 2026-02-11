@@ -45,16 +45,18 @@
 
 ## 2. 실행 파일 빌드 (Build Executable)
 
-PyInstaller를 사용하여 Python 코드를 **단일 EXE**(onefile 모드)로 변환합니다.
+PyInstaller를 사용하여 Python 코드를 **폴더 방식(onedir)**으로 변환합니다.
+이 방식은 실행 파일(`CasperFinder.exe`)과 라이브러리 폴더(`_internal`)가 분리되어 있어 실행 속도가 빠르고 DLL 로드 오류가 적습니다.
 
 ```powershell
 # 프로젝트 루트(e:\CasperFinder)에서 실행
 pyinstaller CasperFinder.spec --clean --noconfirm
 ```
 
-- **결과물:** `dist/CasperFinder.exe` (단일 실행 파일)
+- **결과물:** `dist/CasperFinder/` (폴더)
+  - `CasperFinder.exe`
+  - `_internal/` (라이브러리 포함)
 - **참고:** `CasperFinder.spec` 파일에 `assets`, `constants` 등 리소스 포함 설정이 이미 되어 있습니다.
-- **onefile 모드**: 설치 폴더에 `.pyc` 소스 구조가 노출되지 않습니다.
 
 ---
 
