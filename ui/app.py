@@ -15,7 +15,12 @@ from ui.pages.settings_page import build_settings_tab
 from ui.components.vehicle_card import build_vehicle_card
 from ui.components.notifier import show_notification
 from core.config import load_config, save_config, BASE_DIR
-from ui.filter_logic import sort_vehicles, update_filter, get_filter_values
+from ui.filter_logic import (
+    sort_vehicles,
+    update_filter,
+    get_filter_values,
+    passes_filter,
+)
 from ui.components.dialogs import CenteredConfirmDialog
 from ui.components.update_dialog import UpdateDialog
 from core.sound import play_alert
@@ -671,6 +676,37 @@ class CasperFinderApp(ctk.CTk):
         self._new_vehicle_count += 1
         self._update_badge(flash=True)
         self._schedule_alert()
+
+        # ── 자동 계약 페이지 열기 ──
+        self._check_auto_contract(vehicle, label, detail_url)
+
+    def _check_auto_contract(self, vehicle, label, detail_url):
+        """필터 조건 완전 일치 시 자동으로 계약 페이지를 브라우저에서 연다."""
+        # 설정 확인
+        if not hasattr(self, "auto_contract_var"):
+            return
+        if not self.auto_contract_var.get():
+            return
+
+        # 필터가 하나라도 설정되어 있어야 함 (모두 기본값이면 무시)
+        f = self.filters
+        has_any_filter = (
+            f["trim"] != "트림"
+            or f["ext"] != "외장색상"
+            or f["int"] != "내장색상"
+            or f["opt"] != ["옵션"]
+        )
+        if not has_any_filter:
+            return
+
+        # 필터 조건 완전 매치 확인
+        from datetime import datetime
+
+        vehicle_item = (vehicle, label, detail_url, datetime.now())
+        if passes_filter(vehicle_item, self.filters):
+            import webbrowser
+
+            webbrowser.open(detail_url)
 
     def focus_on_vehicle(self, car_id):
         """특정 차량 카드로 스크롤 이동 및 하이라이트"""

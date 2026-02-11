@@ -143,7 +143,7 @@ def build_alert_tab(app, container):
         else:
             cb.set(curr if curr else label)
 
-        cb.pack(side="left", padx=3)
+        cb.pack(side="left", padx=6)
 
     def _refresh_combo(key, combo, label):
         """필터 변경 후 콤보박스 values와 표시 텍스트를 갱신."""
