@@ -64,6 +64,7 @@ class PollingEngine:
         self.on_notification = None  # (vehicle: dict, label: str, url: str) -> None
         self.on_vehicle_removed = None  # (removed_ids: set, label: str) -> None
         self.on_poll_count = None  # (count: int) -> None
+        self.on_server_status = None  # (status: str, details: dict) -> None
 
     @property
     def is_running(self):
@@ -116,7 +117,30 @@ class PollingEngine:
                 headers = config["api"]["headers"]
 
                 tasks = [self._check(session, t, config, headers) for t in targets]
-                await asyncio.gather(*tasks, return_exceptions=True)
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                if self.on_server_status:
+                    import time
+
+                    success_count = 0
+                    details = {"last_check": time.time()}
+
+                    for i, r in enumerate(results):
+                        target_label = targets[i]["label"]
+                        if isinstance(r, tuple) and r[0] is True:
+                            success_count += 1
+                            details[target_label] = {"ok": True, "ms": r[1]}
+                        else:
+                            details[target_label] = {"ok": False, "err": str(r)}
+
+                    total_count = len(targets)
+                    if success_count == total_count:
+                        status = "정상"
+                    elif success_count > 0:
+                        status = "불안정"
+                    else:
+                        status = "장애"
+                    self.on_server_status(status, details)
 
                 self.poll_count += 1
                 if self.on_poll_count:
@@ -131,6 +155,9 @@ class PollingEngine:
         label = target["label"]
         api_config = config["api"]
 
+        import time
+
+        start = time.perf_counter()
         success, vehicles, total, error = await fetch_exhibition(
             session,
             api_config,
@@ -138,10 +165,11 @@ class PollingEngine:
             target_overrides=target,
             headers_override=headers,
         )
+        elapsed_ms = int((time.perf_counter() - start) * 1000)
 
         if not success:
             self._emit_log(f"[{label}] {error}")
-            return
+            return False, error
 
         current_ids = set()
         vehicle_map = {}
@@ -155,6 +183,7 @@ class PollingEngine:
                 vehicle_map[vid] = v
 
         self._diff_vehicles(exhb_no, label, current_ids, vehicle_map, total)
+        return True, elapsed_ms
 
     def _diff_vehicles(self, exhb_no, label, current_ids, vehicle_map, total):
         prev_ids = set(self.known_vehicles.get(exhb_no, []))

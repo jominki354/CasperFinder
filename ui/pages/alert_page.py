@@ -4,60 +4,8 @@ from ui.components.smooth_scroll import SmoothScrollFrame
 
 
 def build_alert_tab(app, container):
-    """차량검색 탭 UI를 container에 그린다."""
+    """차량검색 탭 UI를 container에 그린다. (상단바는 전역으로 이동됨)"""
     frame = container
-
-    # ── 상단 바 (시작/중지 + 건수 표시) ──
-    bar = ctk.CTkFrame(frame, fg_color=Colors.BG_CARD, corner_radius=0, height=48)
-    bar.pack(fill="x")
-    bar.pack_propagate(False)
-
-    inner = ctk.CTkFrame(bar, fg_color="transparent")
-    inner.pack(fill="x", padx=16, pady=8)
-
-    # 상태 및 버튼
-    app.status_label = ctk.CTkLabel(
-        inner,
-        text="● 대기 중",
-        font=ctk.CTkFont(size=14, weight="bold"),
-        text_color=Colors.TEXT_MUTED,
-    )
-    app.status_label.pack(side="left")
-
-    is_running = app.engine.is_running
-    btn_text = "중지" if is_running else "시작"
-    btn_color = Colors.BG_HOVER if is_running else Colors.PRIMARY
-    btn_text_color = Colors.TEXT if is_running else "white"
-
-    app.search_toggle_btn = ctk.CTkButton(
-        inner,
-        text=btn_text,
-        width=60,
-        height=26,
-        font=ctk.CTkFont(size=13, weight="bold"),
-        fg_color=btn_color,
-        hover_color=Colors.ACCENT_HOVER,
-        text_color=btn_text_color,
-        corner_radius=4,
-        command=app._toggle_search,
-    )
-    if is_running:
-        app.search_toggle_btn.configure(border_width=1, border_color=Colors.BORDER)
-        app.status_label.configure(
-            text="차량검색을 시작했습니다!", text_color=Colors.SUCCESS
-        )
-
-    app.search_toggle_btn.pack(side="left", padx=(8, 0))
-
-    app.total_count_label = ctk.CTkLabel(
-        inner,
-        text=f"총 {len(app.vehicles_found)}대를 찾았습니다",
-        font=ctk.CTkFont(size=13, weight="bold"),
-        text_color=Colors.TEXT,
-    )
-    app.total_count_label.pack(side="left", padx=(15, 0))
-
-    ctk.CTkFrame(frame, height=1, fg_color=Colors.DIVIDER).pack(fill="x")
 
     # ── 정렬 및 필터 헤더 ──
     header = ctk.CTkFrame(frame, fg_color="transparent")

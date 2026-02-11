@@ -15,13 +15,6 @@ def build_settings_tab(app, container):
     """설정 탭 UI를 container에 그린다."""
     frame = container
 
-    ctk.CTkLabel(
-        frame,
-        text="설정",
-        font=ctk.CTkFont(size=19, weight="bold"),
-        text_color=Colors.TEXT,
-    ).pack(padx=20, pady=(20, 8), anchor="w")
-
     config = load_config()
     app_settings = config.get(
         "appSettings",

@@ -30,16 +30,8 @@ def build_filter_tab(app, container):
     if not hasattr(app, "filter_vars"):
         app.filter_vars = {}
 
-    # ── 상단 타이틀 ──
-    ctk.CTkLabel(
-        frame,
-        text="조건 설정",
-        font=ctk.CTkFont(size=19, weight="bold"),
-        text_color=Colors.PRIMARY,
-    ).pack(padx=20, pady=(20, 12), anchor="w")
-
     scroll = ctk.CTkScrollableFrame(frame, fg_color="transparent")
-    scroll.pack(fill="both", expand=True, padx=20, pady=(0, 20))
+    scroll.pack(fill="both", expand=True, padx=20, pady=(10, 20))
 
     # ───── 기획전별 섹션 생성 ─────
     for i, target in enumerate(targets):
