@@ -96,7 +96,27 @@ begin
   Sleep(500);
 end;
 
-// 설치 시작 전: 실행 중이면 종료 요청
+// PyInstaller onefile 임시 폴더(_MEI*) 정리
+procedure CleanMEITempFolders();
+var
+  TempPath: string;
+  FindRec: TFindRec;
+begin
+  TempPath := ExpandConstant('{tmp}\\..');
+  if FindFirst(TempPath + '\_MEI*', FindRec) then
+  begin
+    try
+      repeat
+        if (FindRec.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+          DelTree(TempPath + '\' + FindRec.Name, True, True, True);
+      until not FindNext(FindRec);
+    finally
+      FindClose(FindRec);
+    end;
+  end;
+end;
+
+// 설치 시작 전: 실행 중이면 종료 요청 + 임시 폴더 정리
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
   Result := '';
@@ -107,11 +127,15 @@ begin
     begin
       KillProcess('{#MyAppExeName}');
       // 종료 대기
-      Sleep(1000);
+      Sleep(1500);
     end
     else
       Result := '{#MyAppName}을(를) 종료한 후 다시 시도해주세요.';
   end;
+
+  // PyInstaller 임시 폴더 정리 (DLL 충돌 방지)
+  if Result = '' then
+    CleanMEITempFolders();
 end;
 
 // 제거 시작 전: 실행 중이면 강제 종료
