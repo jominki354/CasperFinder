@@ -131,12 +131,12 @@ def build_alert_tab(app, container):
         cb.configure(command=_on_filter_select)
 
         curr = app.filters.get(key)
-        if key == "opt" and isinstance(curr, list):
+        if (key == "opt" or key == "trim") and isinstance(curr, list):
             display_val = label
-            selected_real = [o for o in curr if o != label]
+            selected_real = [o.replace("✓ ", "") for o in curr if o != label]
             if selected_real:
                 if len(selected_real) == 1:
-                    display_val = selected_real[0]
+                    display_val = f"✓ {selected_real[0]}"
                 else:
                     display_val = f"{selected_real[0]} 외 {len(selected_real) - 1}"
             cb.set(display_val)
@@ -150,7 +150,7 @@ def build_alert_tab(app, container):
         new_vals = app._get_filter_values(key, label)
         combo.configure(values=new_vals)
 
-        if key == "opt":
+        if key == "opt" or key == "trim":
             curr = app.filters.get(key)
             if isinstance(curr, list):
                 selected_real = [o.replace("✓ ", "") for o in curr if o != label]

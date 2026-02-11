@@ -98,21 +98,21 @@ class PollingEngine:
             loop.close()
 
     async def _poll_loop(self):
-        # 초기 메시지용 로드
+        import random
+
         config = load_config()
-        interval = config.get("pollInterval", 5)
+        interval = config.get("pollInterval", 3)
         targets = config["targets"]
         self._emit_log(
-            f"[시스템] 대상: {', '.join(t['label'] for t in targets)} | 간격: {interval}초"
+            f"[시스템] 대상: {', '.join(t['label'] for t in targets)} | 간격: ~{interval}초"
         )
 
         timeout = aiohttp.ClientTimeout(total=10)
         async with aiohttp.ClientSession(timeout=timeout) as session:
             while not self._stop_flag:
-                # 매 폴링마다 최신 설정 로드 (지역 설정 등 반영)
                 config = load_config()
                 targets = config["targets"]
-                interval = config.get("pollInterval", 5)
+                interval = config.get("pollInterval", 3)
                 headers = config["api"]["headers"]
 
                 tasks = [self._check(session, t, config, headers) for t in targets]
@@ -121,7 +121,10 @@ class PollingEngine:
                 self.poll_count += 1
                 if self.on_poll_count:
                     self.on_poll_count(self.poll_count)
-                await asyncio.sleep(interval)
+
+                # 랜덤 지터: interval + 0.00~0.99초
+                jitter = random.uniform(0, 0.99)
+                await asyncio.sleep(interval + jitter)
 
     async def _check(self, session, target, config, headers):
         exhb_no = target["exhbNo"]

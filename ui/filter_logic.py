@@ -56,8 +56,11 @@ def get_priority(vehicle_item, filters):
     v = vehicle_item[0]
     score = 0
 
-    if filters["trim"] != "트림" and filters["trim"] in v.get("trimNm", ""):
-        score += 100
+    # 트림 (복수선택)
+    if filters["trim"] != ["트림"]:
+        selected_trims = [t.replace("✓ ", "") for t in filters["trim"] if t != "트림"]
+        if any(t in v.get("trimNm", "") for t in selected_trims):
+            score += 100
     if filters["ext"] != "외장색상" and filters["ext"] in v.get("extCrNm", ""):
         score += 50
     if filters["int"] != "내장색상" and filters["int"] in v.get("intCrNm", ""):
@@ -83,8 +86,11 @@ def passes_filter(vehicle_item, filters):
     """
     v = vehicle_item[0]
 
-    if filters["trim"] != "트림" and filters["trim"] not in v.get("trimNm", ""):
-        return False
+    # 트림 (복수선택)
+    if filters["trim"] != ["트림"]:
+        selected_trims = [t.replace("✓ ", "") for t in filters["trim"] if t != "트림"]
+        if not any(t in v.get("trimNm", "") for t in selected_trims):
+            return False
     if filters["ext"] != "외장색상" and filters["ext"] not in v.get("extCrNm", ""):
         return False
     if filters["int"] != "내장색상" and filters["int"] not in v.get("intCrNm", ""):
@@ -147,13 +153,14 @@ def update_filter(filters, key, value):
     Returns:
         dict: 업데이트된 filters
     """
-    if key == "opt":
-        if value == "옵션":
-            filters[key] = ["옵션"]
+    if key == "opt" or key == "trim":
+        default_label = "옵션" if key == "opt" else "트림"
+        if value == default_label:
+            filters[key] = [default_label]
         else:
             curr = filters[key]
-            if "옵션" in curr:
-                curr.remove("옵션")
+            if default_label in curr:
+                curr.remove(default_label)
 
             pure_val = value.replace("✓ ", "")
             found = None
@@ -165,7 +172,7 @@ def update_filter(filters, key, value):
             if found:
                 curr.remove(found)
                 if not curr:
-                    curr = ["옵션"]
+                    curr = [default_label]
             else:
                 curr.append("✓ " + pure_val)
             filters[key] = curr
@@ -202,8 +209,8 @@ def get_filter_values(key, label, vehicles_found, current_filters):
     values = {v for v in values if v}
 
     res = []
-    if key == "opt":
-        selected_pures = [o.replace("✓ ", "") for o in current_filters["opt"]]
+    if key == "opt" or key == "trim":
+        selected_pures = [o.replace("✓ ", "") for o in current_filters[key]]
         for val in sorted(list(values)):
             if val in selected_pures:
                 res.append("✓ " + val)

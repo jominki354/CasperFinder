@@ -61,7 +61,7 @@ class CasperFinderApp(ctk.CTk):
         self.vehicle_widget_map = {}  # {car_id: widget}
         self.sort_key = "price_high"  # 기본: 높은가격순
         self.filters = {
-            "trim": "트림",
+            "trim": ["트림"],
             "ext": "외장색상",
             "int": "내장색상",
             "opt": ["옵션"],
@@ -691,7 +691,7 @@ class CasperFinderApp(ctk.CTk):
         # 필터가 하나라도 설정되어 있어야 함 (모두 기본값이면 무시)
         f = self.filters
         has_any_filter = (
-            f["trim"] != "트림"
+            f["trim"] != ["트림"]
             or f["ext"] != "외장색상"
             or f["int"] != "내장색상"
             or f["opt"] != ["옵션"]
