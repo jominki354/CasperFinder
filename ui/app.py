@@ -553,6 +553,12 @@ class CasperFinderApp(ctk.CTk):
             self.search_progress.pack(side="left", padx=12)
             self.search_progress.start()
 
+        # 검색 중 메시지 갱신
+        if not self.vehicles_found:
+            from ui.pages.alert_page import show_empty_msg
+
+            show_empty_msg(self)
+
         self._update_timer()
 
     def _stop_polling(self):
@@ -573,6 +579,12 @@ class CasperFinderApp(ctk.CTk):
         if hasattr(self, "search_progress") and self.search_progress.winfo_exists():
             self.search_progress.stop()
             self.search_progress.pack_forget()
+
+        # 검색 중지 메시지 갱신
+        if not self.vehicles_found:
+            from ui.pages.alert_page import show_empty_msg
+
+            show_empty_msg(self)
 
         self.server_details = {}
         self._on_server_status("대기 중")
@@ -617,8 +629,8 @@ class CasperFinderApp(ctk.CTk):
                     val_color = Colors.ERROR
                 lbl.configure(text=val_text, text_color=val_color)
 
-        # 표시
-        self.server_tooltip_widget.place(relx=0.98, rely=0.066, anchor="ne")
+        # 표시 (상단 바 바로 아래 우측 끝에 고정하여 마우스 커서와 겹침 방지 -> 깜빡임 해결)
+        self.server_tooltip_widget.place(x=1270, y=48, anchor="ne")
         self.server_tooltip_widget.lift()
 
     def _hide_server_tooltip(self, event):
