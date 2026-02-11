@@ -45,8 +45,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked; OnlyBelowVersion: 6.1; Check: not IsAdminInstallMode
 
 [Files]
-; PyInstaller onefile 빌드 결과물 (단일 EXE)
-Source: "dist\CasperFinder.exe"; DestDir: "{app}"; Flags: ignoreversion
+; PyInstaller onedir 빌드 결과물 (EXE + _internal/)
+Source: "dist\CasperFinder\CasperFinder.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\CasperFinder\_internal\*"; DestDir: "{app}\_internal"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
