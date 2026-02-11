@@ -141,40 +141,56 @@ class VehicleCard(ctk.CTkFrame):
         price = get_field(vehicle, "price", "carPrice", default=0)
         discount = get_field(vehicle, "discountAmt", "crDscntAmt", default=0)
 
-        for lbl, val in [
-            ("출고센터", center),
-            ("생산일", prod_date),
-            ("할인액", format_price(discount)),
-            ("최종 가격", format_price(price)),
-        ]:
-            col = ctk.CTkFrame(ibox, fg_color="transparent")
-            col.pack(side="left", expand=True, padx=2)
+        # 좌측: 차량 정보 (출고센터 | 생산일)
+        info_l = ctk.CTkFrame(ibox, fg_color="transparent")
+        info_l.pack(side="left", fill="y", padx=2)
 
-            # 라벨: 더 작고 연하게
+        def _add_info(parent, label, value):
+            f = ctk.CTkFrame(parent, fg_color="transparent")
+            f.pack(side="left", padx=(0, 20))  # 간격 증가 (15 -> 20)
             ctk.CTkLabel(
-                col,
-                text=lbl,
-                font=ctk.CTkFont(size=10, weight="bold"),
-                text_color=Colors.TEXT_MUTED,
+                f, text=label, font=ctk.CTkFont(size=11), text_color=Colors.TEXT_MUTED
             ).pack(anchor="w")
-
-            # 색상 및 폰트 결정
-            is_price = "가격" in lbl
-            is_discount = "할인" in lbl
-            v_color = (
-                Colors.PRIMARY
-                if is_price
-                else (Colors.ERROR if is_discount and discount > 0 else Colors.TEXT)
-            )
-            v_font_size = 17 if is_price else 13
-
-            # 값: 크기 및 강조 조절
             ctk.CTkLabel(
-                col,
-                text=str(val),
-                font=ctk.CTkFont(size=v_font_size, weight="bold"),
-                text_color=v_color,
-            ).pack(anchor="w", pady=(0, 2))
+                f,
+                text=str(value),
+                font=ctk.CTkFont(size=14, weight="bold"),
+                text_color=Colors.TEXT,
+            ).pack(anchor="w")  # 폰트 강조
+
+        _add_info(info_l, "출고센터", center)
+        _add_info(info_l, "생산일", prod_date)
+
+        # 우측: 가격 정보 (할인 | 최종가격)
+        info_r = ctk.CTkFrame(ibox, fg_color="transparent")
+        info_r.pack(side="right", fill="y", padx=2)
+
+        # 최종 가격 (가장 우측)
+        pf = ctk.CTkFrame(info_r, fg_color="transparent")
+        pf.pack(side="right")
+        ctk.CTkLabel(
+            pf, text="최종가", font=ctk.CTkFont(size=11), text_color=Colors.PRIMARY
+        ).pack(anchor="e")
+        ctk.CTkLabel(
+            pf,
+            text=format_price(price),
+            font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=Colors.PRIMARY,
+        ).pack(anchor="e")
+
+        # 할인액 (최종가 좌측)
+        if discount > 0:
+            df = ctk.CTkFrame(info_r, fg_color="transparent")
+            df.pack(side="right", padx=(0, 20))  # 최종가와의 간격
+            ctk.CTkLabel(
+                df, text="할인", font=ctk.CTkFont(size=11), text_color=Colors.TEXT_MUTED
+            ).pack(anchor="e")
+            ctk.CTkLabel(
+                df,
+                text=format_price(discount),
+                font=ctk.CTkFont(size=14, weight="bold"),
+                text_color=Colors.ERROR,
+            ).pack(anchor="e")
 
         # ── 하단 ──
         bot = ctk.CTkFrame(inner, fg_color="transparent")
