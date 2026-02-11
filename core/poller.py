@@ -5,7 +5,10 @@ GUI 프레임워크 의존성 없음. 콜백으로 UI에 결과 전달.
 
 import asyncio
 import logging
+import random
 import threading
+import time
+
 import aiohttp
 
 from core.config import load_config
@@ -99,7 +102,6 @@ class PollingEngine:
             loop.close()
 
     async def _poll_loop(self):
-        import random
 
         config = load_config()
         interval = config.get("pollInterval", 3)
@@ -120,8 +122,6 @@ class PollingEngine:
                 results = await asyncio.gather(*tasks, return_exceptions=True)
 
                 if self.on_server_status:
-                    import time
-
                     success_count = 0
                     details = {"last_check": time.time()}
 
@@ -154,8 +154,6 @@ class PollingEngine:
         exhb_no = target["exhbNo"]
         label = target["label"]
         api_config = config["api"]
-
-        import time
 
         start = time.perf_counter()
         success, vehicles, total, error = await fetch_exhibition(

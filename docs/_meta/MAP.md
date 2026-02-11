@@ -23,7 +23,10 @@ e:\CasperFinder\
 │
 ├── ui/                      # 사용자 인터페이스 (CustomTkinter)
 │   ├── __init__.py
-│   ├── app.py               # 메인 윈도우 (전역 상단바 + 네비게이션 + 탭 + 필터/정렬/서버상태/알림)
+│   ├── app.py               # 메인 윈도우 (네비게이션 + 탭 + 폴링 제어 + 생명주기)
+│   ├── top_bar.py            # TopBarMixin: 상단바/서버상태/타이머/툴팁
+│   ├── card_manager.py       # CardManagerMixin: 카드 위젯 풀/페이징/정렬 렌더링
+│   ├── alert_handler.py      # AlertHandlerMixin: 알림 큐/히스토리/배지/자동계약
 │   ├── theme.py             # 테마 상수 (Colors 클래스: 화이트 모드, PRIMARY=#0052CC)
 │   ├── tray.py              # 시스템 트레이 매니저 (pystray)
 │   ├── filter_logic.py      # 필터/정렬 로직 (우선순위 스코어링, 필터 값 관리)

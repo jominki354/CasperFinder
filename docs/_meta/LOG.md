@@ -1,4 +1,12 @@
 # LOG
+## [2026-02-11] 코드 최적화 — app.py 모듈화
+- `app.py` (1,060줄 → ~400줄): Mixin 패턴으로 3개 모듈 분할
+  - `ui/top_bar.py` (TopBarMixin): 상단바, 서버 상태, 타이머, 툴팁
+  - `ui/card_manager.py` (CardManagerMixin): 카드 위젯 풀, 페이징, 정렬 렌더링
+  - `ui/alert_handler.py` (AlertHandlerMixin): 알림 큐, 히스토리, 배지, 자동 계약
+- `hasattr()` 12건 제거: `__init__`에 위젯 변수 사전 선언 (`None`)
+- `core/poller.py`: 함수 내부 `import` 3건 → 모듈 상단 이동
+
 ## [2026-02-11] 프로젝트 정리
 - 불필요 파일 삭제: `tmp_path.txt`, `Hyundai-Casper-Electric-2-1024x633.webp`, `assets/nav_logo.jpg`
 - 레거시 디렉토리 삭제: `ui/flet/` (Flet 프레임워크 전환 잔재, __pycache__만 존재)
