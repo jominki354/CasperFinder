@@ -160,7 +160,7 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
         else:
             self.after(2000, self.deiconify)
 
-        self.after(500, self._check_update_on_start)
+        self.after(5000, self._check_update_on_start)
 
         if app_settings.get("autoSearch", True):
             self.after(100, self._start_polling)

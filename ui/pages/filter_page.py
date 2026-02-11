@@ -57,11 +57,6 @@ def build_filter_tab(app, container):
             text_color=Colors.PRIMARY,
         ).pack(side="left")
 
-        # 기획전 유형별 동적 UI 빌드
-        # E: 특별 (배송지 + 보조금)
-        # D: 전시차 (보조금 중심 - 사용자 스크린샷 1 반영)
-        # R: 리퍼브 (배송지 중심 - 사용자 스크린샷 2 반영)
-
         if exhb_no.startswith("E"):
             build_section_layout(
                 scroll,
@@ -92,6 +87,21 @@ def build_filter_tab(app, container):
                 show_delivery=True,
                 show_subsidy=False,
             )
+
+    # ───── 하단 통합 저장 버튼 ─────
+    def on_save_all():
+        do_save_all(app, targets, regions_data)
+
+    ctk.CTkButton(
+        frame,
+        text="모든 조건 설정 저장",
+        font=ctk.CTkFont(size=14, weight="bold"),
+        fg_color=Colors.PRIMARY,
+        hover_color=Colors.ACCENT_HOVER,
+        width=200,
+        height=40,
+        command=on_save_all,
+    ).pack(pady=(10, 20))
 
 
 def build_section_layout(
@@ -189,21 +199,6 @@ def build_section_layout(
     # 초기값 적용
     apply_to_ui(target, vars, regions_data, config, d_sigun_cb, s_sigun_cb)
 
-    # 저장 버튼
-    def on_save():
-        do_save(target, vars, regions_data, config, show_delivery, show_subsidy)
-
-    ctk.CTkButton(
-        main_content,
-        text="설정 저장",
-        fg_color=Colors.PRIMARY,
-        hover_color=Colors.ACCENT_HOVER,
-        width=100,
-        height=32,
-        font=ctk.CTkFont(size=12, weight="bold"),
-        command=on_save,
-    ).pack(side="right", padx=(10, 0))
-
 
 def apply_to_ui(target, vars, regions_data, config, d_cb, s_cb):
     """JSON 설정값을 UI 변수에 매핑"""
@@ -254,42 +249,51 @@ def apply_to_ui(target, vars, regions_data, config, d_cb, s_cb):
             vars["s_sigun"].set(regions_data["subsidy"][0]["siguns"][0]["name"])
 
 
-def do_save(target, vars, regions_data, config, has_delivery, has_subsidy):
-    """UI 변수값을 target 딕셔너리에 저장하고 config.json 파일 업데이트"""
+def do_save_all(app, targets, regions_data):
+    """모든 타겟의 UI 변수값을 한 번에 저장"""
+    config = load_config()
+    targets_in_config = config.get("targets", [])
 
-    if has_delivery:
-        s_name = vars["d_sido"].get()
-        sg_name = vars["d_sigun"].get()
-        s_obj = next((r for r in regions_data["delivery"] if r["name"] == s_name), None)
-        sg_obj = (
-            next((s for s in s_obj["siguns"] if s["name"] == sg_name), None)
-            if s_obj
-            else None
-        )
-        if sg_obj:
-            target["deliveryAreaCode"] = s_obj["code"]
-            target["deliveryLocalAreaCode"] = sg_obj["code"]
+    for target in targets_in_config:
+        t_id = target.get("exhbNo", "")
+        if t_id not in app.filter_vars:
+            continue
 
-    if has_subsidy:
-        ss_name = vars["s_sido"].get()
-        ssg_name = vars["s_sigun"].get()
-        ss_obj = next(
-            (r for r in regions_data["subsidy"] if r["name"] == ss_name), None
-        )
-        ssg_obj = (
-            next((s for s in ss_obj["siguns"] if s["name"] == ssg_name), None)
-            if ss_obj
-            else None
-        )
-        if ssg_obj:
-            target["subsidyRegion"] = ssg_obj["code"]
+        vars = app.filter_vars[t_id]
+        exhb_no = t_id
 
-    # 최신 설정을 다시 로드하여 병합 (타 탭에서 변경된 사항 보존)
-    current_config = load_config()
-    current_config["targets"] = config[
-        "targets"
-    ]  # 현재 탭에서 수정한 targets 전체를 반영
-    save_config(current_config)
+        # 기획전 타입 인지
+        has_delivery = exhb_no.startswith("E") or exhb_no.startswith("R")
+        has_subsidy = exhb_no.startswith("E") or exhb_no.startswith("D")
+
+        if has_delivery:
+            s_name = vars["d_sido"].get()
+            sg_name = vars["d_sigun"].get()
+            s_obj = next(
+                (r for r in regions_data["delivery"] if r["name"] == s_name), None
+            )
+            if s_obj:
+                sg_obj = next(
+                    (s for s in s_obj["siguns"] if s["name"] == sg_name), None
+                )
+                if sg_obj:
+                    target["deliveryAreaCode"] = s_obj["code"]
+                    target["deliveryLocalAreaCode"] = sg_obj["code"]
+
+        if has_subsidy:
+            ss_name = vars["s_sido"].get()
+            ssg_name = vars["s_sigun"].get()
+            ss_obj = next(
+                (r for r in regions_data["subsidy"] if r["name"] == ss_name), None
+            )
+            if ss_obj:
+                ssg_obj = next(
+                    (s for s in ss_obj["siguns"] if s["name"] == ssg_name), None
+                )
+                if ssg_obj:
+                    target["subsidyRegion"] = ssg_obj["code"]
+
+    save_config(config)
     show_notification(
-        f"[{target['label']}] 설정이 성공적으로 저장되었습니다.", title="설정 완료"
+        "모든 기획전 설정이 한 번에 저장되었습니다.", title="설정 일괄 저장"
     )

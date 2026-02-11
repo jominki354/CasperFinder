@@ -140,7 +140,31 @@ def load_config():
             save_json(CONFIG_PATH, DEFAULT_CONFIG)
         return DEFAULT_CONFIG.copy()
 
-    return load_json(CONFIG_PATH, DEFAULT_CONFIG.copy())
+    config = load_json(CONFIG_PATH, DEFAULT_CONFIG.copy())
+
+    # --- 핵심 코드 강제 업데이트 로직 (버전/기획전 코드 등) ---
+    needs_save = False
+
+    # 1. 기획전 코드 동기화
+    for i, def_t in enumerate(DEFAULT_CONFIG["targets"]):
+        if i < len(config.get("targets", [])):
+            curr_t = config["targets"][i]
+            # 기획전 코드가 다르면 최신 정보로 덮어씀
+            if curr_t.get("exhbNo") != def_t["exhbNo"]:
+                curr_t["exhbNo"] = def_t["exhbNo"]
+                needs_save = True
+
+    # 2. 기본 차종 코드 동기화 (전기차 AXEV 강제 등)
+    def_car = DEFAULT_CONFIG["api"]["defaultPayload"]["carCode"]
+    curr_car = config.get("api", {}).get("defaultPayload", {}).get("carCode")
+    if curr_car != def_car:
+        config["api"]["defaultPayload"]["carCode"] = def_car
+        needs_save = True
+
+    if needs_save:
+        save_config(config)
+
+    return config
 
 
 def save_config(config):
