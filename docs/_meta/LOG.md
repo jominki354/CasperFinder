@@ -1,4 +1,14 @@
 # LOG
+## [2026-02-11] 프로젝트 정리
+- 불필요 파일 삭제: `tmp_path.txt`, `Hyundai-Casper-Electric-2-1024x633.webp`, `assets/nav_logo.jpg`
+- 레거시 디렉토리 삭제: `ui/flet/` (Flet 프레임워크 전환 잔재, __pycache__만 존재)
+- 빌드 산출물 삭제: `build/`, `dist/`, `installer_output/` (v0.0.6~v0.0.9 설치파일)
+- 런타임 데이터 삭제: `data/` (개발 환경 잔재, 실제 앱은 %LOCALAPPDATA% 사용)
+- `__pycache__/` 전체 삭제 (core, ui, pages, components)
+- 개발 스크립트 정리: `download_colors.py`, `test_api.py` → `scripts/` 폴더로 이동
+- `.gitignore` 정리: 삭제된 파일 항목 제거, data/ 추가, 카테고리별 그룹핑
+- `MAP.md` 갱신: 현재 실제 디렉토리 트리 반영
+
 ## [2026-02-10] Planning & Design Phase
 - 프로젝트 초기화 및 메타 문서 생성 완료.
 - 기획전 유형별(E, D, R) 서브 메뉴 및 필터 동작 분석.

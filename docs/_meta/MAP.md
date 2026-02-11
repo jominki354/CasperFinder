@@ -3,8 +3,9 @@
 ```
 e:\CasperFinder\
 │
-├── main.py                  # 진입점 (로깅 설정 + 앱 실행)
+├── main.py                  # 진입점 (중복 실행 방지 + 앱 실행)
 ├── config.json              # 기획전 목록, API 설정, 기본 payload
+├── .gitignore               # Git 무시 목록
 │
 ├── core/                    # 비즈니스 로직
 │   ├── __init__.py
@@ -15,7 +16,7 @@ e:\CasperFinder\
 │   ├── notifier.py          # Windows 토스트 알림 (winotify, 백업용)
 │   ├── poller.py            # 폴링 엔진 (threading + diff + 서버 상태 추적)
 │   ├── dummy.py             # 테스트용 더미 차량 데이터 생성기
-│   ├── sound.py             # MP3 알림 사운드 재생 (무설치)
+│   ├── sound.py             # MP3 알림 사운드 재생 (Windows MCI, 무설치)
 │   ├── utils.py             # 유틸리티 (자동 시작 레지스트리 등)
 │   ├── version.py           # 앱 버전 상수
 │   └── updater.py           # GitHub 릴리스 업데이트 확인 로직
@@ -33,28 +34,27 @@ e:\CasperFinder\
 │   │   └── settings_page.py # 설정 탭 (검색/알림/시스템/정보 + 더미 데이터 이스터에그)
 │   └── components/
 │       ├── __init__.py
-│       ├── notifier.py      # 인앱 토스트 알림 (FloatingNotification + 큐잉)
+│       ├── notifier.py      # 인앱 토스트 알림 (FloatingNotification + 싱글턴)
 │       ├── toast.py         # 간단 인라인 토스트 위젯 (설정 저장 피드백)
 │       ├── vehicle_card.py  # 차량 카드 위젯 (VehicleCard + 하이라이트)
 │       ├── smooth_scroll.py # 스무스(관성) 스크롤 프레임
-│       └── update_dialog.py # 업데이트 다운로드/설치 다이얼로그
-│
-├── data/                    # 자동 생성 (런타임 데이터)
-│   ├── known_vehicles.json  # 기존 vehicleId 저장
-│   └── history.json         # 알림 히스토리
+│       ├── update_dialog.py # 업데이트 다운로드/설치 다이얼로그
+│       └── dialogs.py       # 공통 다이얼로그 (CenteredConfirmDialog)
 │
 ├── constants/               # 정적 데이터
 │   └── regions.json         # 전국 배송/보조금 지역 코드 매핑
 │
 ├── assets/                  # 정적 리소스
 │   ├── alert.mp3            # 알림 사운드
-│   ├── icon.ico             # 앱/트레이 아이콘
+│   ├── app_icon.ico         # 앱 아이콘 (ICO)
+│   ├── app_icon.png         # 앱 아이콘 (PNG, 트레이용)
+│   ├── splash.png           # 스플래시 스크린 이미지
 │   └── colors/
 │       ├── exterior/        # 외장 색상 칩 이미지 (14종)
 │       └── interior/        # 내장 색상 칩 이미지 (4종)
 │
 ├── docs/
-│   ├── PLAN.md
+│   ├── PLAN.md              # MVP 구현 계획서
 │   ├── DEPLOY.md            # 배포/빌드 가이드 (PyInstaller + Inno Setup)
 │   ├── REGIONS.md           # 배송/보조금 지역 코드 분석 문서
 │   ├── CASPER_ELECTRIC_2026.md  # 2026 캐스퍼 EV 사양/옵션/색상
@@ -69,8 +69,10 @@ e:\CasperFinder\
 │       ├── LOG.md           # 변경 이력
 │       └── ANALYSIS.md      # API 분석 문서
 │
+├── scripts/                 # 개발 유틸리티 스크립트
+│   ├── download_colors.py   # 색상 칩 이미지 다운로드
+│   └── test_api.py          # API 엔드포인트 테스트
+│
 ├── CasperFinder.spec        # PyInstaller 빌드 스펙
-├── installer.iss            # Inno Setup 인스톨러 스크립트
-├── download_colors.py       # 색상 이미지 다운로드 유틸
-└── test_api.py              # API 테스트 스크립트
+└── installer.iss            # Inno Setup 인스톨러 스크립트
 ```
