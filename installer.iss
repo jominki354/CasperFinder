@@ -3,7 +3,7 @@
 ; 빌드: ISCC.exe installer.iss
 
 #define MyAppName "CasperFinder"
-#define MyAppVersion "0.0.4"
+#define MyAppVersion "0.0.5"
 #define MyAppPublisher "사슴"
 #define MyAppURL "https://github.com/jominki354/CasperFinder"
 #define MyAppExeName "CasperFinder.exe"

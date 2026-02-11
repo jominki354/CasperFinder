@@ -318,6 +318,37 @@ def build_settings_tab(app, container):
     btn_row = ctk.CTkFrame(frame, fg_color="transparent")
     # 초기에는 숨김
 
+    def _clear_dummy():
+        """더미 데이터 및 모든 차량 초기화."""
+        app.vehicles_found.clear()
+        app._new_vehicle_count = 0
+        app.notification_count = 0
+        # 위젯 풀 초기화
+        for w in app.vehicle_widget_map.values():
+            if w.winfo_exists():
+                w.destroy()
+        app.vehicle_widget_map.clear()
+        # 뱃지 갱신
+        app._update_badge()
+        # 총 대수 라벨 갱신
+        if hasattr(app, "total_count_label") and app.total_count_label.winfo_exists():
+            app.total_count_label.configure(text="차량을 검색하고 있습니다...")
+
+    ctk.CTkButton(
+        btn_row,
+        text="지우기",
+        width=80,
+        height=30,
+        font=ctk.CTkFont(size=12),
+        fg_color="transparent",
+        border_width=1,
+        border_color=Colors.ERROR,
+        text_color=Colors.ERROR,
+        hover_color=Colors.BG_HOVER,
+        corner_radius=4,
+        command=_clear_dummy,
+    ).pack(side="right", padx=(8, 0))
+
     ctk.CTkButton(
         btn_row,
         text="더미 데이터 생성",
