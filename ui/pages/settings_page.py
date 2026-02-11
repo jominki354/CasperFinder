@@ -370,7 +370,7 @@ def build_settings_tab(app, container):
         # 뱃지 갱신
         app._update_badge()
         # 총 대수 라벨 갱신
-        if hasattr(app, "total_count_label") and app.total_count_label.winfo_exists():
+        if app.total_count_label and app.total_count_label.winfo_exists():
             app.total_count_label.configure(text="차량을 검색하고 있습니다...")
 
     ctk.CTkButton(

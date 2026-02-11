@@ -133,7 +133,7 @@ def build_alert_tab(app, container):
 
 def show_empty_msg(app):
     """데이터가 없을 때 표시할 메시지 (상태에 따라 다름)."""
-    if not hasattr(app, "card_scroll") or not app.card_scroll.winfo_exists():
+    if not app.card_scroll or not app.card_scroll.winfo_exists():
         return
 
     # SmoothScrollFrame → inner, CTkScrollableFrame → 직접
@@ -146,7 +146,7 @@ def show_empty_msg(app):
         else "검색 중인 차량이 없습니다\n시작 버튼을 눌러 차량검색을 시작하세요"
     )
 
-    if hasattr(app, "empty_label") and app.empty_label.winfo_exists():
+    if app.empty_label and app.empty_label.winfo_exists():
         app.empty_label.configure(text=msg)
     else:
         app.empty_label = ctk.CTkLabel(
