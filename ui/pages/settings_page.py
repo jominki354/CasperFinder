@@ -343,6 +343,20 @@ def build_settings_tab(app, container):
             if w.winfo_exists():
                 w.destroy()
         app.vehicle_widget_map.clear()
+        # 필터 초기화
+        app.filters = {
+            "trim": ["트림"],
+            "ext": "외장색상",
+            "int": "내장색상",
+            "opt": ["옵션"],
+        }
+        # 콤보박스 표시도 초기화
+        if hasattr(app, "_filter_combos"):
+            for key, (cb, label) in app._filter_combos.items():
+                if cb.winfo_exists():
+                    cb.set(label)
+        # 페이지 초기화
+        app._current_page = 0
         # 뱃지 갱신
         app._update_badge()
         # 총 대수 라벨 갱신

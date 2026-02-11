@@ -67,6 +67,8 @@ class CasperFinderApp(ctk.CTk):
             "opt": ["옵션"],
         }
         self._rebuild_job = None
+        self._current_page = 0
+        self._page_size = 10
 
         self.current_tab = -1
         self._tray_notified = False
@@ -533,12 +535,12 @@ class CasperFinderApp(ctk.CTk):
         return widget
 
     def _repack_cards(self):
-        """기존 위젯을 파괴하지 않고 정렬/필터 순서에 맞게 재배치."""
+        """기존 위젯을 파괴하지 않고 정렬/필터 순서에 맞게 재배치 (페이징 포함)."""
         parent = self._get_card_parent()
         if not parent:
             return
 
-        # 모든 카드 숨기기 (destroy 아님)
+        # 모든 카드 및 페이지 바 숨기기 (destroy 아님)
         for w in parent.winfo_children():
             w.pack_forget()
 
@@ -550,11 +552,107 @@ class CasperFinderApp(ctk.CTk):
 
         sorted_list = sort_vehicles(self.vehicles_found, self.sort_key, self.filters)
 
-        for v, lbl, url, ts in sorted_list:
+        if not sorted_list:
+            from ui.pages.alert_page import show_empty_msg
+
+            show_empty_msg(self)
+            return
+
+        # 페이지 계산
+        total = len(sorted_list)
+        total_pages = max(1, (total + self._page_size - 1) // self._page_size)
+        if self._current_page >= total_pages:
+            self._current_page = total_pages - 1
+        if self._current_page < 0:
+            self._current_page = 0
+
+        start = self._current_page * self._page_size
+        end = min(start + self._page_size, total)
+        page_items = sorted_list[start:end]
+
+        for v, lbl, url, ts in page_items:
             cid = v.get("carId", v.get("vehicleId"))
             widget = self.vehicle_widget_map.get(cid)
             if widget and widget.winfo_exists():
                 widget.pack(fill="x", pady=3, padx=4)
+
+        # 페이지 바 렌더링 (2페이지 이상일 때만)
+        if total_pages > 1:
+            self._render_page_bar(parent, total_pages, total)
+
+    def _render_page_bar(self, parent, total_pages, total_items):
+        """페이지 네비게이션 바를 렌더링."""
+        import customtkinter as ctk
+
+        bar = ctk.CTkFrame(parent, fg_color="transparent", height=40)
+        bar.pack(fill="x", pady=(8, 4))
+
+        inner = ctk.CTkFrame(bar, fg_color="transparent")
+        inner.pack(anchor="center")
+
+        # 이전 버튼
+        prev_state = "normal" if self._current_page > 0 else "disabled"
+        ctk.CTkButton(
+            inner,
+            text="◀",
+            width=32,
+            height=28,
+            font=ctk.CTkFont(size=12),
+            fg_color="transparent",
+            border_width=1,
+            border_color=Colors.BORDER,
+            text_color=Colors.TEXT,
+            hover_color=Colors.BG_HOVER,
+            state=prev_state,
+            command=lambda: self._go_to_page(self._current_page - 1),
+        ).pack(side="left", padx=2)
+
+        # 페이지 번호 버튼
+        for i in range(total_pages):
+            is_current = i == self._current_page
+            ctk.CTkButton(
+                inner,
+                text=str(i + 1),
+                width=32,
+                height=28,
+                font=ctk.CTkFont(size=12, weight="bold" if is_current else "normal"),
+                fg_color=Colors.ACCENT if is_current else "transparent",
+                text_color="white" if is_current else Colors.TEXT,
+                border_width=0 if is_current else 1,
+                border_color=Colors.BORDER,
+                hover_color=Colors.ACCENT_HOVER if is_current else Colors.BG_HOVER,
+                command=lambda p=i: self._go_to_page(p),
+            ).pack(side="left", padx=2)
+
+        # 다음 버튼
+        next_state = "normal" if self._current_page < total_pages - 1 else "disabled"
+        ctk.CTkButton(
+            inner,
+            text="▶",
+            width=32,
+            height=28,
+            font=ctk.CTkFont(size=12),
+            fg_color="transparent",
+            border_width=1,
+            border_color=Colors.BORDER,
+            text_color=Colors.TEXT,
+            hover_color=Colors.BG_HOVER,
+            state=next_state,
+            command=lambda: self._go_to_page(self._current_page + 1),
+        ).pack(side="left", padx=2)
+
+        # 총 건수 라벨
+        ctk.CTkLabel(
+            inner,
+            text=f"  ({total_items}대)",
+            font=ctk.CTkFont(size=11),
+            text_color=Colors.TEXT_SUB,
+        ).pack(side="left", padx=(8, 0))
+
+    def _go_to_page(self, page):
+        """페이지 이동."""
+        self._current_page = page
+        self._repack_cards()
 
     def _remount_and_repack(self):
         """탭 재진입 시 위젯 풀 초기화 후 재빌드."""
@@ -757,10 +855,12 @@ class CasperFinderApp(ctk.CTk):
 
     def _update_filter(self, key, value):
         self.filters = update_filter(self.filters, key, value)
+        self._current_page = 0
         self._schedule_repack()
 
     def _update_sort(self, key):
         self.sort_key = key
+        self._current_page = 0
         self._schedule_repack()
 
     def _get_filter_values(self, key, label):
