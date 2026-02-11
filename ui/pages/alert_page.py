@@ -1,5 +1,6 @@
 import customtkinter as ctk
 from ui.theme import Colors
+from ui.components.smooth_scroll import SmoothScrollFrame
 
 
 def build_alert_tab(app, container):
@@ -105,10 +106,12 @@ def build_alert_tab(app, container):
         ("내장색상", "int", 120),
     ]
 
+    # 콤보박스 참조 저장 (필터 변경 후 갱신용)
+    app._filter_combos = {}
+
     for label, key, width in filters:
         vals = app._get_filter_values(key, label)
 
-        # 옵션만 특수 처리 (복수 선택 표시)
         cb = ctk.CTkComboBox(
             filter_box,
             values=vals,
@@ -116,12 +119,19 @@ def build_alert_tab(app, container):
             height=28,
             font=ctk.CTkFont(size=12),
             state="readonly",
-            command=lambda v, k=key: app._update_filter(k, v),
         )
+
+        app._filter_combos[key] = (cb, label)
+
+        def _on_filter_select(v, k=key, combo=cb, lbl=label):
+            app._update_filter(k, v)
+            # 옵션: 선택 후 values 갱신 + 표시 텍스트 업데이트
+            _refresh_combo(k, combo, lbl)
+
+        cb.configure(command=_on_filter_select)
 
         curr = app.filters.get(key)
         if key == "opt" and isinstance(curr, list):
-            # 복수 선택된 경우 표시 방식 제어
             display_val = label
             selected_real = [o for o in curr if o != label]
             if selected_real:
@@ -135,14 +145,36 @@ def build_alert_tab(app, container):
 
         cb.pack(side="left", padx=3)
 
-    # ── 카드 리스트 ──
-    app.card_scroll = ctk.CTkScrollableFrame(frame, fg_color=Colors.BG)
+    def _refresh_combo(key, combo, label):
+        """필터 변경 후 콤보박스 values와 표시 텍스트를 갱신."""
+        new_vals = app._get_filter_values(key, label)
+        combo.configure(values=new_vals)
+
+        if key == "opt":
+            curr = app.filters.get(key)
+            if isinstance(curr, list):
+                selected_real = [o.replace("✓ ", "") for o in curr if o != label]
+                if not selected_real:
+                    combo.set(label)
+                elif len(selected_real) == 1:
+                    combo.set(f"✓ {selected_real[0]}")
+                else:
+                    combo.set(f"{selected_real[0]} 외 {len(selected_real) - 1}")
+            else:
+                combo.set(label)
+
+    # ── 카드 리스트 (스무스 스크롤) ──
+    app.card_scroll = SmoothScrollFrame(frame, fg_color=Colors.BG)
     app.card_scroll.pack(fill="both", expand=True, padx=16, pady=(10, 8))
 
     if not app.vehicles_found:
         show_empty_msg(app)
+    elif app.vehicle_widget_map:
+        # 위젯 풀이 이미 존재 → 새 부모에 재연결
+        app._remount_and_repack()
     else:
-        app._rebuild_vehicle_list()
+        # 최초 진입 → 카드 생성
+        app._initial_build()
 
 
 def show_empty_msg(app):
@@ -150,10 +182,14 @@ def show_empty_msg(app):
     if not hasattr(app, "card_scroll") or not app.card_scroll.winfo_exists():
         return
 
+    # SmoothScrollFrame → inner, CTkScrollableFrame → 직접
+    parent = getattr(app.card_scroll, "inner", app.card_scroll)
+
     app.empty_label = ctk.CTkLabel(
-        app.card_scroll,
+        parent,
         text="검색 중인 차량이 없습니다\n시작 버튼을 눌러 차량검색을 시작하세요",
         font=ctk.CTkFont(size=15),
         text_color=Colors.TEXT_MUTED,
+        justify="center",
     )
-    app.empty_label.pack(pady=80)
+    app.empty_label.pack(expand=True, fill="both", pady=80)

@@ -5,25 +5,24 @@ tkinter withdraw/deiconify 와 연동.
 
 import logging
 import threading
-from PIL import Image, ImageDraw
+from PIL import Image
 import pystray
 from pystray import MenuItem
 from plyer import notification
 
+from core.config import BASE_DIR
+
 log = logging.getLogger("CasperFinder")
+
+ICON_PATH = BASE_DIR / "assets" / "app_icon.png"
 
 
 def _create_icon_image():
-    """64x64 트레이 아이콘 생성."""
-    img = Image.new("RGBA", (64, 64), (245, 245, 245, 255))
-    draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle([8, 22, 56, 50], radius=4, fill=(51, 51, 51))
-    draw.rounded_rectangle([16, 12, 48, 28], radius=4, fill=(51, 51, 51))
-    draw.ellipse([12, 42, 26, 56], fill=(245, 245, 245))
-    draw.ellipse([38, 42, 52, 56], fill=(245, 245, 245))
-    draw.ellipse([15, 45, 23, 53], fill=(150, 150, 150))
-    draw.ellipse([41, 45, 49, 53], fill=(150, 150, 150))
-    return img
+    """제공된 앱 아이콘 이미지 로드."""
+    if ICON_PATH.exists():
+        return Image.open(ICON_PATH)
+    # Fallback: 기존과 유사한 기본 이미지 (혹은 빈 이미지)
+    return Image.new("RGBA", (64, 64), (245, 245, 245, 255))
 
 
 class TrayManager:

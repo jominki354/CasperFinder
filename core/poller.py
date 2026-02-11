@@ -62,6 +62,7 @@ class PollingEngine:
         # 콜백 (UI에서 설정)
         self.on_log = None  # (msg: str) -> None
         self.on_notification = None  # (vehicle: dict, label: str, url: str) -> None
+        self.on_vehicle_removed = None  # (removed_ids: set, label: str) -> None
         self.on_poll_count = None  # (count: int) -> None
 
     @property
@@ -97,32 +98,42 @@ class PollingEngine:
             loop.close()
 
     async def _poll_loop(self):
+        # 초기 메시지용 로드
         config = load_config()
         interval = config.get("pollInterval", 5)
         targets = config["targets"]
-        headers = config["api"]["headers"]
-        timeout = aiohttp.ClientTimeout(total=10)
-
         self._emit_log(
             f"[시스템] 대상: {', '.join(t['label'] for t in targets)} | 간격: {interval}초"
         )
 
-        async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
+        timeout = aiohttp.ClientTimeout(total=10)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             while not self._stop_flag:
-                tasks = [self._check(session, t, config) for t in targets]
+                # 매 폴링마다 최신 설정 로드 (지역 설정 등 반영)
+                config = load_config()
+                targets = config["targets"]
+                interval = config.get("pollInterval", 5)
+                headers = config["api"]["headers"]
+
+                tasks = [self._check(session, t, config, headers) for t in targets]
                 await asyncio.gather(*tasks, return_exceptions=True)
+
                 self.poll_count += 1
                 if self.on_poll_count:
                     self.on_poll_count(self.poll_count)
                 await asyncio.sleep(interval)
 
-    async def _check(self, session, target, config):
+    async def _check(self, session, target, config, headers):
         exhb_no = target["exhbNo"]
         label = target["label"]
         api_config = config["api"]
 
         success, vehicles, total, error = await fetch_exhibition(
-            session, api_config, exhb_no
+            session,
+            api_config,
+            exhb_no,
+            target_overrides=target,
+            headers_override=headers,
         )
 
         if not success:
@@ -174,6 +185,8 @@ class PollingEngine:
 
         if removed_ids:
             self._emit_log(f"[{label}] {len(removed_ids)}대 판매/삭제됨")
+            if self.on_vehicle_removed:
+                self.on_vehicle_removed(removed_ids, label)
             changed = True
 
         if changed:

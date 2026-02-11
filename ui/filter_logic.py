@@ -65,11 +65,38 @@ def get_priority(vehicle_item, filters):
 
     if filters["opt"] != ["옵션"]:
         _, opts = get_option_info(v)
-        selected_opts = [o.replace("v ", "") for o in filters["opt"] if o != "옵션"]
+        selected_opts = [o.replace("✓ ", "") for o in filters["opt"] if o != "옵션"]
         if all(any(sel in o for o in opts) for sel in selected_opts):
             score += 50 * len(selected_opts)
 
     return score
+
+
+def passes_filter(vehicle_item, filters):
+    """필터 조건에 매칭되는지 확인.
+
+    Args:
+        vehicle_item: (vehicle, label, url, timestamp) 튜플
+        filters: 현재 필터 dict
+    Returns:
+        bool: 매칭 여부
+    """
+    v = vehicle_item[0]
+
+    if filters["trim"] != "트림" and filters["trim"] not in v.get("trimNm", ""):
+        return False
+    if filters["ext"] != "외장색상" and filters["ext"] not in v.get("extCrNm", ""):
+        return False
+    if filters["int"] != "내장색상" and filters["int"] not in v.get("intCrNm", ""):
+        return False
+
+    if filters["opt"] != ["옵션"]:
+        _, opts = get_option_info(v)
+        selected_opts = [o.replace("✓ ", "") for o in filters["opt"] if o != "옵션"]
+        if not all(any(sel in o for o in opts) for sel in selected_opts):
+            return False
+
+    return True
 
 
 def get_sort_val(vehicle_item, sort_key):
@@ -90,13 +117,16 @@ def get_sort_val(vehicle_item, sort_key):
 
 
 def sort_vehicles(vehicles, sort_key, filters):
-    """차량 리스트를 정렬 + 우선순위 스코어링 적용.
+    """차량 리스트를 필터링 + 정렬 + 우선순위 스코어링 적용.
 
     Returns:
-        list: 정렬된 차량 리스트
+        list: 필터링 및 정렬된 차량 리스트
     """
+    # 필터 매칭되는 것만
+    filtered = [item for item in vehicles if passes_filter(item, filters)]
+
     sorted_list = sorted(
-        vehicles,
+        filtered,
         key=lambda item: get_sort_val(item, sort_key),
         reverse=(sort_key != "price_low"),
     )
@@ -125,10 +155,10 @@ def update_filter(filters, key, value):
             if "옵션" in curr:
                 curr.remove("옵션")
 
-            pure_val = value.replace("v ", "")
+            pure_val = value.replace("✓ ", "")
             found = None
             for c in curr:
-                if c.replace("v ", "") == pure_val:
+                if c.replace("✓ ", "") == pure_val:
                     found = c
                     break
 
@@ -137,7 +167,7 @@ def update_filter(filters, key, value):
                 if not curr:
                     curr = ["옵션"]
             else:
-                curr.append("v " + pure_val)
+                curr.append("✓ " + pure_val)
             filters[key] = curr
     else:
         filters[key] = value
@@ -173,10 +203,10 @@ def get_filter_values(key, label, vehicles_found, current_filters):
 
     res = []
     if key == "opt":
-        selected_pures = [o.replace("v ", "") for o in current_filters["opt"]]
+        selected_pures = [o.replace("✓ ", "") for o in current_filters["opt"]]
         for val in sorted(list(values)):
             if val in selected_pures:
-                res.append("v " + val)
+                res.append("✓ " + val)
             else:
                 res.append(val)
     else:

@@ -1,12 +1,12 @@
 """
 CasperFinder — 캐스퍼 기획전 신규 차량 알리미
-진입점. CustomTkinter UI.
+진입점. 스플래시 스크린 후 메인 앱 실행.
 """
 
 import sys
 import ctypes
 import logging
-from ui.app import CasperFinderApp
+import customtkinter as ctk
 
 logging.basicConfig(
     level=logging.INFO,
@@ -15,17 +15,12 @@ logging.basicConfig(
 )
 
 
-# ── 중복 실행 방지 (Windows Mutex) ──
+# ── 중복 실행 방지 ──
 def check_single_instance():
     mutex_name = "Global\\CasperFinder_SingleInstance_Mutex"
     kernel32 = ctypes.windll.kernel32
-
-    # Mutex 생성 시도
     mutex = kernel32.CreateMutexW(None, False, mutex_name)
-    last_error = kernel32.GetLastError()
-
-    # ERROR_ALREADY_EXISTS = 183
-    if last_error == 183:
+    if kernel32.GetLastError() == 183:
         ctypes.windll.user32.MessageBoxW(
             0, "애플리케이션이 이미 실행 중입니다.", "CasperFinder", 0x40 | 0x0
         )
@@ -34,10 +29,19 @@ def check_single_instance():
 
 
 if __name__ == "__main__":
-    # 고정 핸들을 전역 변수가 아닌 로컬에 두어 GC 방지
     _mutex_handle = check_single_instance()
     if _mutex_handle is None:
         sys.exit(0)
 
+    from ui.app import CasperFinderApp
+
+    # 테마 설정
+    ctk.set_appearance_mode("light")
+    ctk.set_default_color_theme("blue")
+
     app = CasperFinderApp()
+
+    # 이미지 기반 스플래시가 필요한 경우 app._show_splash(path) 같은 형태로 구현하거나
+    # PyInstaller --splash 사용을 권장하지만, 실시간 구동을 위해 간단히 구현 가능
+
     app.mainloop()

@@ -1,19 +1,22 @@
 """
-커스텀 알림 관리자 (병목 방지 및 큐잉)
+인앱 알림 관리자 (단일 윈도우 재활용)
+
+매번 CTkToplevel을 생성/파괴하지 않고,
+하나의 윈도우를 유지하면서 텍스트만 교체하여 성능 최적화.
 """
 
 import customtkinter as ctk
 from ui.theme import Colors
 
-# 전역 알림 큐
-_notification_queue = []
-_current_notifier = None
+# 전역 싱글턴
+_instance = None
 
 
 class FloatingNotification(ctk.CTkToplevel):
-    def __init__(self, message, title="CasperFinder", on_close=None):
+    """재사용 가능한 단일 알림 윈도우."""
+
+    def __init__(self):
         super().__init__()
-        self.on_close = on_close
 
         # ── 윈도우 설정 ──
         self.overrideredirect(True)
@@ -22,15 +25,18 @@ class FloatingNotification(ctk.CTkToplevel):
         self.configure(fg_color="#ABCDEF")
 
         # ── 크기 및 위치 ──
-        width, height = 330, 130  # 높이 확대 (내용 잘림 방지)
+        self._width, self._height = 330, 130
         padding = 20
-        screen_w, screen_h = self.winfo_screenwidth(), self.winfo_screenheight()
+        screen_w = self.winfo_screenwidth()
+        screen_h = self.winfo_screenheight()
         self.geometry(
-            f"{width}x{height}+{screen_w - width - padding}+{screen_h - height - padding - 40}"
+            f"{self._width}x{self._height}"
+            f"+{screen_w - self._width - padding}"
+            f"+{screen_h - self._height - padding - 40}"
         )
         self.attributes("-alpha", 0.0)
 
-        # ── UI 구성 ──
+        # ── UI 구성 (한 번만 생성) ──
         self.main_frame = ctk.CTkFrame(
             self,
             fg_color=Colors.BG_CARD,
@@ -50,71 +56,125 @@ class FloatingNotification(ctk.CTkToplevel):
             text_color=Colors.TEXT_MUTED,
             hover_color=Colors.BG_HOVER,
             corner_radius=10,
-            command=self._fade_out,
+            command=self._dismiss,
         ).place(relx=0.98, rely=0.08, anchor="ne")
 
-        content = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        content.pack(fill="both", expand=True, padx=15, pady=12)
+        self._content = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self._content.pack(fill="both", expand=True, padx=15, pady=12)
 
-        ctk.CTkLabel(
-            content,
-            text=title,
+        self._title_label = ctk.CTkLabel(
+            self._content,
+            text="",
             font=ctk.CTkFont(size=14, weight="bold"),
             text_color=Colors.ACCENT,
-        ).pack(anchor="w")
-        ctk.CTkLabel(
-            content,
-            text=message,
+        )
+        self._title_label.pack(anchor="w")
+
+        self._msg_label = ctk.CTkLabel(
+            self._content,
+            text="",
             font=ctk.CTkFont(size=14),
             text_color=Colors.TEXT,
             wraplength=280,
             justify="left",
-        ).pack(anchor="w", pady=(2, 0))
+        )
+        self._msg_label.pack(anchor="w", pady=(2, 0))
 
-        self._fade_in()
+        # 상태
+        self._fade_job = None
+        self._dismiss_job = None
+        self._click_command = None
+        self._visible = False
+
+        # 클릭 이벤트 바인딩 (한 번만)
+        self.bind("<Button-1>", self._on_click)
+        self.main_frame.bind("<Button-1>", self._on_click)
+        self._content.bind("<Button-1>", self._on_click)
+        self._title_label.bind("<Button-1>", self._on_click)
+        self._msg_label.bind("<Button-1>", self._on_click)
+
+        # 숨긴 상태로 시작
+        self.withdraw()
+
+    def show(self, message, title="CasperFinder", command=None):
+        """알림 내용을 교체하고 표시. 이미 보이고 있으면 텍스트만 교체."""
+        # 대기 중인 작업 취소
+        if self._fade_job:
+            self.after_cancel(self._fade_job)
+            self._fade_job = None
+        if self._dismiss_job:
+            self.after_cancel(self._dismiss_job)
+            self._dismiss_job = None
+
+        # 텍스트 교체
+        self._title_label.configure(text=title)
+        self._msg_label.configure(text=message)
+        self._click_command = command
+
+        if self._visible:
+            # 이미 보이고 있으면 텍스트만 교체 + 자동 닫기 타이머 리셋
+            self.attributes("-alpha", 1.0)
+            self._dismiss_job = self.after(3000, self._fade_out)
+        else:
+            # 새로 표시 (페이드 인)
+            self.deiconify()
+            self.attributes("-alpha", 0.0)
+            self._visible = True
+            self._fade_in()
 
     def _fade_in(self):
+        if not self.winfo_exists():
+            return
         curr = self.attributes("-alpha")
         if curr < 1.0:
-            self.attributes("-alpha", curr + 0.1)
-            self.after(15, self._fade_in)
+            self.attributes("-alpha", min(1.0, curr + 0.15))
+            self._fade_job = self.after(12, self._fade_in)
         else:
-            self.after(2500, self._fade_out)  # 표시 시간 약간 연장
+            self._fade_job = None
+            self._dismiss_job = self.after(3000, self._fade_out)
 
-    def _fade_out(self, event=None):  # event 인자 추가 (클릭 시 대응)
+    def _fade_out(self):
         if not self.winfo_exists():
             return
         curr = self.attributes("-alpha")
         if curr > 0.0:
-            self.attributes("-alpha", curr - 0.1)
-            self.after(15, self._fade_out)
+            self.attributes("-alpha", max(0.0, curr - 0.15))
+            self._fade_job = self.after(12, self._fade_out)
         else:
-            self.destroy()
-            if self.on_close:
-                self.on_close()
+            self._fade_job = None
+            self._visible = False
+            self.withdraw()
+
+    def _dismiss(self):
+        """즉시 숨기기."""
+        if self._fade_job:
+            self.after_cancel(self._fade_job)
+            self._fade_job = None
+        if self._dismiss_job:
+            self.after_cancel(self._dismiss_job)
+            self._dismiss_job = None
+        self.attributes("-alpha", 0.0)
+        self._visible = False
+        self.withdraw()
+
+    def _on_click(self, event=None):
+        if self._click_command:
+            self._click_command()
+        self._dismiss()
+
+
+def _get_instance():
+    """싱글턴 인스턴스 반환. 윈도우가 파괴된 경우 재생성."""
+    global _instance
+    if _instance is None or not _instance.winfo_exists():
+        _instance = FloatingNotification()
+    return _instance
 
 
 def show_notification(message, title="CasperFinder", command=None):
-    """알림을 큐에 추가. command 인자로 클릭 시 액션 지원."""
-    global _current_notifier
-
-    def _process_next():
-        global _current_notifier
-        if _notification_queue:
-            msg, ttl, cmd = _notification_queue.pop(0)
-            notif = FloatingNotification(msg, ttl, on_close=_process_next)
-            _current_notifier = notif
-            if cmd:
-                notif.bind("<Button-1>", lambda e, n=notif, c=cmd: [c(), n._fade_out()])
-        else:
-            _current_notifier = None
-
-    # 이미 표시 중인 알림이 있으면 큐에 추가
-    if _current_notifier and _current_notifier.winfo_exists():
-        if len(_notification_queue) < 5:
-            _notification_queue.append((message, title, command))
-    else:
-        notif = FloatingNotification(message, title, on_close=_process_next)
-        _current_notifier = notif
-        if command:
-            notif.bind("<Button-1>", lambda e, n=notif, c=command: [c(), n._fade_out()])
+    """인앱 알림 표시. 기존 알림이 있으면 텍스트만 교체."""
+    try:
+        notif = _get_instance()
+        notif.show(message, title, command)
+    except Exception:
+        pass

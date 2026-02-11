@@ -25,13 +25,23 @@ def build_url(api_config, exhb_no):
     return f"{api_config['baseUrl']}/{exhb_no}"
 
 
-def build_payload(api_config, exhb_no):
+def build_payload(api_config, exhb_no, target_overrides=None):
     """API 요청 body 생성.
 
-    defaultPayload를 기반으로 exhbNo만 오버라이드.
-    필터 추가 시 여기서 queryList 등을 구성.
+    defaultPayload를 기본으로 하되, exhbNo 및 target_overrides(지역 설정 등) 반영.
     """
-    return {**api_config["defaultPayload"], "exhbNo": exhb_no}
+    payload = {**api_config["defaultPayload"], "exhbNo": exhb_no}
+    if target_overrides:
+        # 배송지/보조금/출고센터 지역 코드 오버라이드
+        for key in [
+            "deliveryAreaCode",
+            "deliveryLocalAreaCode",
+            "subsidyRegion",
+            "deliveryCenterCode",
+        ]:
+            if key in target_overrides:
+                payload[key] = target_overrides[key]
+    return payload
 
 
 def parse_response(raw):
@@ -65,17 +75,20 @@ def extract_vehicle_id(vehicle):
     return vehicle.get("vehicleId", vehicle.get("vin", ""))
 
 
-async def fetch_exhibition(session, api_config, exhb_no):
+async def fetch_exhibition(
+    session, api_config, exhb_no, target_overrides=None, headers_override=None
+):
     """단일 기획전 API 호출.
 
     Returns:
         (success: bool, vehicles: list, total: int, error: str|None)
     """
     url = build_url(api_config, exhb_no)
-    payload = build_payload(api_config, exhb_no)
+    payload = build_payload(api_config, exhb_no, target_overrides)
+    headers = headers_override or api_config.get("headers")
 
     try:
-        async with session.post(url, json=payload) as resp:
+        async with session.post(url, json=payload, headers=headers) as resp:
             if resp.status != 200:
                 return False, [], 0, f"HTTP {resp.status}"
 
