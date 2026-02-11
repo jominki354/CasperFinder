@@ -48,10 +48,10 @@ def build_alert_tab(app, container):
     filter_box.pack(side="right")
 
     filters = [
-        ("트림", "trim", 80),
-        ("옵션", "opt", 140),
-        ("외장색상", "ext", 120),
-        ("내장색상", "int", 120),
+        ("트림", "trim", 150),
+        ("옵션", "opt", 190),
+        ("외장색상", "ext", 140),
+        ("내장색상", "int", 140),
     ]
 
     # 콤보박스 참조 저장 (필터 변경 후 갱신용)

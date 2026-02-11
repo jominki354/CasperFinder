@@ -33,7 +33,7 @@ HISTORY_PATH = DATA_DIR / "history.json"
 DEFAULT_CONFIG = {
     "targets": [
         {
-            "exhbNo": "E20260223",
+            "exhbNo": "E20260277",
             "label": "특별기획전",
             "deliveryAreaCode": "B",
             "deliveryLocalAreaCode": "B0",
@@ -76,7 +76,7 @@ DEFAULT_CONFIG = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         },
         "defaultPayload": {
-            "carCode": "AX05",
+            "carCode": "AXEV",
             "subsidyRegion": "2600",
             "sortCode": "50",
             "deliveryAreaCode": "B",

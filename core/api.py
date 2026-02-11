@@ -61,7 +61,7 @@ def parse_response(raw):
     if rsp.get("rspCode") != "0000":
         return False, [], 0, rsp.get("rspMessage", "unknown error")
 
-    vehicles = data.get("discountsearchcars", [])
+    vehicles = data.get("list", data.get("discountsearchcars", []))
     total = data.get("totalCount", 0)
     return True, vehicles, total, None
 
@@ -87,20 +87,32 @@ async def fetch_exhibition(
     payload = build_payload(api_config, exhb_no, target_overrides)
     headers = headers_override or api_config.get("headers")
 
+    # API 디버그 로그 1: 요청 정보
+    log.info(f"[API] >>> REQUEST: {url}")
+    log.info(f"[API] PAYLOAD: {json.dumps(payload, ensure_ascii=False)}")
+
     try:
         async with session.post(url, json=payload, headers=headers) as resp:
-            if resp.status != 200:
-                return False, [], 0, f"HTTP {resp.status}"
-
+            status_code = resp.status
             text = await resp.text()
+
+            # API 디버그 로그 2: 응답 정보
+            log.info(f"[API] <<< RESPONSE Status: {status_code}")
             try:
                 raw = json.loads(text)
+                log.info(f"[API] BODY: {json.dumps(raw, ensure_ascii=False)}")
             except json.JSONDecodeError:
+                log.info(f"[API] BODY: (Raw Text) {text[:500]}...")
                 return False, [], 0, "JSON 파싱 실패 (HTML 응답?)"
 
+            if status_code != 200:
+                return False, [], 0, f"HTTP {status_code}"
+
     except aiohttp.ClientError as e:
+        log.info(f"[API] !!! ERROR: {type(e).__name__}")
         return False, [], 0, f"요청 실패: {type(e).__name__}"
     except asyncio.TimeoutError:
+        log.info("[API] !!! TIMEOUT")
         return False, [], 0, "타임아웃"
 
     return parse_response(raw)

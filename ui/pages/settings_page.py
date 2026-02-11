@@ -388,6 +388,28 @@ def build_settings_tab(app, container):
         command=_clear_dummy,
     ).pack(side="right", padx=(8, 0))
 
+    def _show_debug_log():
+        """디버그 로그 창 띄우기."""
+        if hasattr(app, "log_window"):
+            app.log_window.deiconify()
+            app.log_window.lift()
+            app.log_window.focus_force()
+
+    ctk.CTkButton(
+        btn_row,
+        text="디버그 로그",
+        width=100,
+        height=30,
+        font=ctk.CTkFont(size=12),
+        fg_color="transparent",
+        border_width=1,
+        border_color=Colors.PRIMARY,
+        text_color=Colors.PRIMARY,
+        hover_color=Colors.BG_HOVER,
+        corner_radius=4,
+        command=_show_debug_log,
+    ).pack(side="left")
+
     ctk.CTkButton(
         btn_row,
         text="더미 데이터 생성",

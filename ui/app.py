@@ -7,6 +7,7 @@ Mixin 구조:
 """
 
 import os
+import logging
 from datetime import datetime
 import customtkinter as ctk
 from PIL import Image
@@ -22,6 +23,7 @@ from ui.filter_logic import update_filter, get_filter_values
 from ui.components.dialogs import CenteredConfirmDialog
 from ui.components.update_dialog import UpdateDialog
 from ui.components.notifier import show_notification
+from ui.components.log_window import LogWindow
 
 # Mixin 모듈
 from ui.top_bar import TopBarMixin
@@ -29,9 +31,26 @@ from ui.card_manager import CardManagerMixin
 from ui.alert_handler import AlertHandlerMixin
 
 
+class UILogHandler(logging.Handler):
+    """로깅 메시지를 앱의 _on_log 콜백으로 전달하는 핸들러."""
+
+    def __init__(self, callback):
+        super().__init__()
+        self.callback = callback
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.callback(msg)
+
+
 class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk):
     def __init__(self):
         super().__init__()
+
+        # ── 로깅 핸들러 등록 ──
+        self.logger = logging.getLogger("CasperFinder")
+        self.log_handler = UILogHandler(self._on_log)
+        self.logger.addHandler(self.log_handler)
 
         self.title("CasperFinder")
         self.geometry("1280x720")
@@ -102,6 +121,8 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
         self.empty_label = None
         self.card_scroll = None
         self.auto_contract_var = None
+        self.log_window = LogWindow(self)
+        self.log_window.withdraw()  # 처음엔 숨김
 
         # ── 트레이 ──
         self.tray = TrayManager(on_show=self._show_window, on_quit=self._quit_app)
@@ -414,6 +435,11 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
     # ── 엔진 콜백 ──
 
     def _on_log(self, msg):
+        # 디버그 창에 항상 기록
+        if hasattr(self, "log_window") and self.log_window.winfo_exists():
+            self.after(0, lambda: self.log_window.append_log(msg))
+
+        # 상태바에는 에러만 표시
         if "에러" in msg or "실패" in msg:
             self.after(0, lambda: self._update_status(f"⚠ {msg[:50]}", Colors.ERROR))
 
