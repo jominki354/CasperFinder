@@ -6,7 +6,7 @@ from PIL import Image
 
 from core.poller import PollingEngine
 from core.storage import load_history, save_history
-from core.formatter import format_vehicle_summary, format_price, get_option_info
+from core.formatter import format_vehicle_summary, format_price
 from ui.theme import Colors
 from ui.tray import TrayManager
 from ui.pages.alert_page import build_alert_tab
@@ -31,9 +31,9 @@ class CasperFinderApp(ctk.CTk):
         super().__init__()
 
         self.title("CasperFinder")
-        self.geometry("1024x720")
+        self.geometry("1280x720")
         self.resizable(False, False)
-        self.minsize(1024, 720)
+        self.minsize(1280, 720)
         self.configure(fg_color=Colors.BG)
 
         ctk.set_appearance_mode("light")
@@ -103,9 +103,9 @@ class CasperFinderApp(ctk.CTk):
 
         screen_width = self.winfo_screenwidth()
         screen_height = self.winfo_screenheight()
-        x = (screen_width // 2) - (width // 2)
-        y = (screen_height // 2) - (height // 2)
-        self.geometry(f"{width}x{height}+{x}+{y}")
+        x = (screen_width // 2) - (1280 // 2)
+        y = (screen_height // 2) - (720 // 2)
+        self.geometry(f"1280x720+{x}+{y}")
 
         self.page_frames = {}
         last_tab = last_state.get("lastTab", 0)
@@ -230,7 +230,7 @@ class CasperFinderApp(ctk.CTk):
                     width=24,
                     height=20,
                     corner_radius=10,
-                    fg_color=Colors.ERROR,
+                    fg_color=Colors.PRIMARY,  # 일관성 위해 PRIMARY로 변경
                     text_color="white",
                     font=ctk.CTkFont(size=11, weight="bold"),
                 )
@@ -467,6 +467,16 @@ class CasperFinderApp(ctk.CTk):
         if not parent:
             return
 
+        # 페이지 이동/갱신 시 항상 스크롤을 맨 위로 초기화
+        if hasattr(self, "card_scroll") and self.card_scroll.winfo_exists():
+            if hasattr(self.card_scroll, "scroll_to_top"):
+                self.card_scroll.scroll_to_top()
+            else:
+                try:
+                    self.card_scroll._parent_canvas.yview_moveto(0)
+                except Exception:
+                    pass
+
         # 1) 가시적인 카드들만 숨기기 (알려진 위젯만 관리하여 CTK 내부 위젯 보호)
         for widget in self.vehicle_widget_map.values():
             if widget.winfo_exists():
@@ -490,6 +500,8 @@ class CasperFinderApp(ctk.CTk):
             self.empty_label.pack_forget()
 
         if not self.vehicles_found:
+            if hasattr(self, "card_scroll") and self.card_scroll.winfo_exists():
+                self.card_scroll.scroll_enabled = False
             from ui.pages.alert_page import show_empty_msg
 
             show_empty_msg(self)
@@ -497,10 +509,16 @@ class CasperFinderApp(ctk.CTk):
 
         sorted_list = sort_vehicles(self.vehicles_found, self.sort_key, self.filters)
         if not sorted_list:
+            if hasattr(self, "card_scroll") and self.card_scroll.winfo_exists():
+                self.card_scroll.scroll_enabled = False
             from ui.pages.alert_page import show_empty_msg
 
             show_empty_msg(self)
             return
+
+        # 데이터가 있으면 스크롤 활성화
+        if hasattr(self, "card_scroll") and self.card_scroll.winfo_exists():
+            self.card_scroll.scroll_enabled = True
 
         total = len(sorted_list)
         total_pages = max(1, (total + self._page_size - 1) // self._page_size)
@@ -520,7 +538,9 @@ class CasperFinderApp(ctk.CTk):
                 widget.pack(fill="x", pady=3, padx=4)
 
         if total_pages > 1:
-            self._render_page_bar(parent, total_pages, total)
+            # 하단 고정 영역이 있으면 그곳에, 없으면 이전처럼 스크롤 내부에 표시
+            bar_parent = getattr(self, "pagination_container", parent)
+            self._render_page_bar(bar_parent, total_pages, total)
 
     def _render_page_bar(self, parent, total_pages, total_items):
         """페이지 네비게이션 바를 렌더링."""
@@ -667,14 +687,8 @@ class CasperFinderApp(ctk.CTk):
         def _add():
             if hasattr(self, "empty_label") and self.empty_label.winfo_exists():
                 self.empty_label.destroy()
-            widget = self._ensure_card_widget(vehicle, label, detail_url)
-            if widget:
-                first = self._get_first_card()
-                if first and first is not widget:
-                    widget.pack(fill="x", pady=3, padx=4, before=first)
-                else:
-                    widget.pack(fill="x", pady=3, padx=4)
-                widget.highlight()
+            # 위젯만 생성해두고 배치는 repack에 맡김 (페이징 유지)
+            self._ensure_card_widget(vehicle, label, detail_url)
             self._schedule_history_save(timestamp, label, vehicle)
             if (
                 hasattr(self, "total_count_label")
@@ -683,6 +697,7 @@ class CasperFinderApp(ctk.CTk):
                 self.total_count_label.configure(
                     text=f"총 {len(self.vehicles_found)}대를 찾았습니다"
                 )
+            self._schedule_repack()
 
         self.after(0, _add)
         self._new_vehicle_count += 1
@@ -707,14 +722,36 @@ class CasperFinderApp(ctk.CTk):
             webbrowser.open(detail_url)
 
     def focus_on_vehicle(self, car_id):
+        """특정 차량 카드로 페이지 이동, 스크롤 이동 및 하이라이트"""
         self._switch_tab(0)
+
+        # 1) 현재 필터/정렬 기준에서 해당 차량이 몇 번째인지 찾기
+        sorted_list = sort_vehicles(self.vehicles_found, self.sort_key, self.filters)
+        target_idx = -1
+        for i, (v, lbl, url, ts) in enumerate(sorted_list):
+            if v.get("carId", v.get("vehicleId")) == car_id:
+                target_idx = i
+                break
+
+        if target_idx != -1:
+            # 2) 해당 차량이 속한 페이지 계산 및 이동
+            target_page = target_idx // self._page_size
+            if self._current_page != target_page:
+                self._current_page = target_page
+                self._repack_cards()
 
         def _do_focus():
             widget = self.vehicle_widget_map.get(car_id)
             if widget and widget.winfo_exists():
                 widget.highlight()
+                # 3) 스크롤 이동
+                if hasattr(self, "card_scroll") and hasattr(
+                    self.card_scroll, "scroll_to_widget"
+                ):
+                    self.card_scroll.scroll_to_widget(widget)
 
-        self.after(200, _do_focus)
+        # 페이지 렌더링 시간을 고려하여 지연 실행
+        self.after(300, _do_focus)
 
     def _schedule_history_save(self, timestamp, label, vehicle):
         if not hasattr(self, "_pending_history"):

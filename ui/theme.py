@@ -22,3 +22,4 @@ class Colors:
 
     SUCCESS = "#2E7D32"
     ERROR = "#C62828"
+    PRIMARY = "#0052CC"  # 하이라이트/정보용 블루

@@ -26,7 +26,7 @@ def build_alert_tab(app, container):
 
     is_running = app.engine.is_running
     btn_text = "중지" if is_running else "시작"
-    btn_color = Colors.BG_HOVER if is_running else Colors.ACCENT
+    btn_color = Colors.BG_HOVER if is_running else Colors.PRIMARY
     btn_text_color = Colors.TEXT if is_running else "white"
 
     app.search_toggle_btn = ctk.CTkButton(
@@ -163,9 +163,15 @@ def build_alert_tab(app, container):
             else:
                 combo.set(label)
 
+    # ── 하단 페이지 바 영역 (고정) ──
+    # side="bottom"으로 먼저 pack하여 스크롤 영역에 밀리지 않게 함
+    app.pagination_container = ctk.CTkFrame(frame, fg_color="transparent", height=40)
+    app.pagination_container.pack(side="bottom", fill="x", padx=16, pady=(0, 6))
+    app.pagination_container.pack_propagate(False)  # 높이 40 유지
+
     # ── 카드 리스트 (스무스 스크롤) ──
     app.card_scroll = SmoothScrollFrame(frame, fg_color=Colors.BG)
-    app.card_scroll.pack(fill="both", expand=True, padx=16, pady=(10, 8))
+    app.card_scroll.pack(side="top", fill="both", expand=True, padx=16, pady=(10, 0))
 
     if not app.vehicles_found:
         show_empty_msg(app)

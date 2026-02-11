@@ -55,81 +55,52 @@ def build_settings_tab(app, container):
         if hasattr(app, "refresh_sound_config"):
             app.refresh_sound_config()
 
-    # ── 앱 동작 설정 ──
-    card_app = ctk.CTkFrame(
+    # ── 1. 서비스 설정 (검색 및 자동화) ──
+    card_svc = ctk.CTkFrame(
         frame,
         fg_color=Colors.BG_CARD,
         corner_radius=8,
         border_width=1,
         border_color=Colors.DIVIDER,
     )
-    card_app.pack(fill="x", padx=20, pady=4)
+    card_svc.pack(fill="x", padx=20, pady=6)
 
     ctk.CTkLabel(
-        card_app,
-        text="앱 동작 설정",
+        card_svc,
+        text="검색 및 자동화",
         font=ctk.CTkFont(size=14, weight="bold"),
-        text_color=Colors.TEXT,
-    ).pack(padx=14, pady=(10, 4), anchor="w")
-
-    app.auto_start_var = ctk.BooleanVar(value=app_settings.get("autoStart", False))
-    app.auto_start_var.trace_add("write", _on_setting_changed)
-    ctk.CTkCheckBox(
-        card_app,
-        text="윈도우 시작 시 자동 실행",
-        variable=app.auto_start_var,
-        font=ctk.CTkFont(size=12),
-        width=20,
-        height=20,
-    ).pack(padx=14, pady=5, anchor="w")
-
-    app.tray_start_var = ctk.BooleanVar(value=app_settings.get("startMinimized", False))
-    app.tray_start_var.trace_add("write", _on_setting_changed)
-    ctk.CTkCheckBox(
-        card_app,
-        text="프로그램 시작 시 트레이로 시작",
-        variable=app.tray_start_var,
-        font=ctk.CTkFont(size=12),
-        width=20,
-        height=20,
-    ).pack(padx=14, pady=5, anchor="w")
+        text_color=Colors.PRIMARY,
+    ).pack(padx=14, pady=(12, 6), anchor="w")
 
     app.auto_search_var = ctk.BooleanVar(value=app_settings.get("autoSearch", True))
     app.auto_search_var.trace_add("write", _on_setting_changed)
     ctk.CTkCheckBox(
-        card_app,
-        text="프로그램 시작 시 바로 차량검색",
+        card_svc,
+        text="프로그램 시작 시 즉시 차량검색 시작",
         variable=app.auto_search_var,
         font=ctk.CTkFont(size=12),
         width=20,
         height=20,
-    ).pack(padx=14, pady=5, anchor="w")
+        fg_color=Colors.PRIMARY,
+        hover_color=Colors.ACCENT_HOVER,
+    ).pack(padx=14, pady=6, anchor="w")
 
     app.auto_contract_var = ctk.BooleanVar(
         value=app_settings.get("autoContract", False)
     )
     app.auto_contract_var.trace_add("write", _on_setting_changed)
     ctk.CTkCheckBox(
-        card_app,
-        text="필터 조건 일치 시 자동으로 계약 페이지 열기",
+        card_svc,
+        text="필터 조건 일치 시 계약 페이지 자동 열기",
         variable=app.auto_contract_var,
         font=ctk.CTkFont(size=12),
         width=20,
         height=20,
-    ).pack(padx=14, pady=5, anchor="w")
+        fg_color=Colors.PRIMARY,
+        hover_color=Colors.ACCENT_HOVER,
+    ).pack(padx=14, pady=(6, 14), anchor="w")
 
-    app.update_notify_var = ctk.BooleanVar(value=app_settings.get("updateNotify", True))
-    app.update_notify_var.trace_add("write", _on_setting_changed)
-    ctk.CTkCheckBox(
-        card_app,
-        text="업데이트 알림",
-        variable=app.update_notify_var,
-        font=ctk.CTkFont(size=12),
-        width=20,
-        height=20,
-    ).pack(padx=14, pady=(0, 10), anchor="w")
-
-    # ── 알림 설정 ──
+    # ── 2. 알림 및 소리 설정 ──
     card_sound = ctk.CTkFrame(
         frame,
         fg_color=Colors.BG_CARD,
@@ -137,42 +108,42 @@ def build_settings_tab(app, container):
         border_width=1,
         border_color=Colors.DIVIDER,
     )
-    card_sound.pack(fill="x", padx=20, pady=4)
+    card_sound.pack(fill="x", padx=20, pady=6)
 
     ctk.CTkLabel(
         card_sound,
-        text="알림 설정",
+        text="알림 및 소리",
         font=ctk.CTkFont(size=14, weight="bold"),
-        text_color=Colors.TEXT,
-    ).pack(padx=14, pady=(10, 4), anchor="w")
+        text_color=Colors.PRIMARY,
+    ).pack(padx=14, pady=(12, 6), anchor="w")
 
-    # 소리 알림 활성화 체크박스
     app.sound_enabled_var = ctk.BooleanVar(value=app_settings.get("soundEnabled", True))
     app.sound_enabled_var.trace_add("write", _on_setting_changed)
 
-    sound_check_row = ctk.CTkFrame(card_sound, fg_color="transparent")
-    sound_check_row.pack(fill="x", padx=14, pady=5)
+    sound_row = ctk.CTkFrame(card_sound, fg_color="transparent")
+    sound_row.pack(fill="x", padx=14, pady=6)
 
     ctk.CTkCheckBox(
-        sound_check_row,
+        sound_row,
         text="차량 발견 시 소리 알림",
         variable=app.sound_enabled_var,
         font=ctk.CTkFont(size=12),
         width=20,
         height=20,
+        fg_color=Colors.PRIMARY,
+        hover_color=Colors.ACCENT_HOVER,
     ).pack(side="left")
 
-    # 테스트 재생 버튼
     def _test_sound():
         alert_path = os.path.join(str(BASE_DIR), "assets", "alert.mp3")
         vol = int(app.sound_volume_var.get())
         play_alert(alert_path, vol)
 
     ctk.CTkButton(
-        sound_check_row,
-        text="▶ 테스트",
-        width=70,
-        height=24,
+        sound_row,
+        text="테스트 재생",
+        width=90,
+        height=26,
         font=ctk.CTkFont(size=11),
         fg_color="transparent",
         border_width=1,
@@ -183,24 +154,19 @@ def build_settings_tab(app, container):
         command=_test_sound,
     ).pack(side="right")
 
-    # 볼륨 슬라이더
     vol_row = ctk.CTkFrame(card_sound, fg_color="transparent")
-    vol_row.pack(fill="x", padx=14, pady=(0, 10))
+    vol_row.pack(fill="x", padx=14, pady=(4, 14))
 
     ctk.CTkLabel(
-        vol_row,
-        text="볼륨",
-        font=ctk.CTkFont(size=12),
-        text_color=Colors.TEXT_SUB,
-    ).pack(side="left", padx=(0, 8))
+        vol_row, text="볼륨", font=ctk.CTkFont(size=12), text_color=Colors.TEXT_SUB
+    ).pack(side="left", padx=(0, 10))
 
     app.sound_volume_var = ctk.DoubleVar(value=app_settings.get("soundVolume", 80))
-
     vol_label = ctk.CTkLabel(
         vol_row,
         text=f"{int(app.sound_volume_var.get())}%",
         font=ctk.CTkFont(size=12, weight="bold"),
-        text_color=Colors.ACCENT,
+        text_color=Colors.PRIMARY,
         width=40,
     )
     vol_label.pack(side="right")
@@ -216,13 +182,69 @@ def build_settings_tab(app, container):
         to=100,
         number_of_steps=20,
         variable=app.sound_volume_var,
-        progress_color=Colors.ACCENT,
-        button_color=Colors.ACCENT,
+        progress_color=Colors.PRIMARY,
+        button_color=Colors.PRIMARY,
         button_hover_color=Colors.ACCENT_HOVER,
         command=_on_volume_change,
     ).pack(side="left", fill="x", expand=True, padx=(0, 8))
 
-    # ── 정보 ──
+    # ── 3. 시스템 설정 (컴퓨터 환경) ──
+    card_sys = ctk.CTkFrame(
+        frame,
+        fg_color=Colors.BG_CARD,
+        corner_radius=8,
+        border_width=1,
+        border_color=Colors.DIVIDER,
+    )
+    card_sys.pack(fill="x", padx=20, pady=6)
+
+    ctk.CTkLabel(
+        card_sys,
+        text="환경 및 업데이트",
+        font=ctk.CTkFont(size=14, weight="bold"),
+        text_color=Colors.PRIMARY,
+    ).pack(padx=14, pady=(12, 6), anchor="w")
+
+    app.auto_start_var = ctk.BooleanVar(value=app_settings.get("autoStart", False))
+    app.auto_start_var.trace_add("write", _on_setting_changed)
+    ctk.CTkCheckBox(
+        card_sys,
+        text="Windows 부팅 시 자동 실행",
+        variable=app.auto_start_var,
+        font=ctk.CTkFont(size=12),
+        width=20,
+        height=20,
+        fg_color=Colors.PRIMARY,
+        hover_color=Colors.ACCENT_HOVER,
+    ).pack(padx=14, pady=6, anchor="w")
+
+    app.tray_start_var = ctk.BooleanVar(value=app_settings.get("startMinimized", False))
+    app.tray_start_var.trace_add("write", _on_setting_changed)
+    ctk.CTkCheckBox(
+        card_sys,
+        text="시작 시 화면을 띄우지 않고 트레이로 소형화",
+        variable=app.tray_start_var,
+        font=ctk.CTkFont(size=12),
+        width=20,
+        height=20,
+        fg_color=Colors.PRIMARY,
+        hover_color=Colors.ACCENT_HOVER,
+    ).pack(padx=14, pady=6, anchor="w")
+
+    app.update_notify_var = ctk.BooleanVar(value=app_settings.get("updateNotify", True))
+    app.update_notify_var.trace_add("write", _on_setting_changed)
+    ctk.CTkCheckBox(
+        card_sys,
+        text="새로운 버전 출시 시 업데이트 알림 받기",
+        variable=app.update_notify_var,
+        font=ctk.CTkFont(size=12),
+        width=20,
+        height=20,
+        fg_color=Colors.PRIMARY,
+        hover_color=Colors.ACCENT_HOVER,
+    ).pack(padx=14, pady=(6, 14), anchor="w")
+
+    # ── 4. 프로그램 정보 ──
     card_info = ctk.CTkFrame(
         frame,
         fg_color=Colors.BG_CARD,
@@ -230,48 +252,43 @@ def build_settings_tab(app, container):
         border_width=1,
         border_color=Colors.DIVIDER,
     )
-    card_info.pack(fill="x", padx=20, pady=4)
+    card_info.pack(fill="x", padx=20, pady=6)
 
     ctk.CTkLabel(
         card_info,
-        text="정보",
+        text="프로그램 정보",
         font=ctk.CTkFont(size=14, weight="bold"),
-        text_color=Colors.TEXT,
-    ).pack(padx=14, pady=(10, 4), anchor="w")
+        text_color=Colors.PRIMARY,
+    ).pack(padx=14, pady=(12, 6), anchor="w")
 
-    # 버전 + 제작자 행
     ver_row = ctk.CTkFrame(card_info, fg_color="transparent")
     ver_row.pack(fill="x", padx=14, pady=(0, 2))
 
     ctk.CTkLabel(
         ver_row,
-        text=f"v{APP_VERSION}",
+        text=f"현재 버전: v{APP_VERSION}",
         font=ctk.CTkFont(size=12, weight="bold"),
-        text_color=Colors.ACCENT,
+        text_color=Colors.PRIMARY,
     ).pack(side="left")
 
     deer_label = ctk.CTkLabel(
         ver_row,
-        text="  from 사슴",
-        font=ctk.CTkFont(size=12, slant="italic"),
-        text_color=Colors.TEXT_SUB,
+        text="  |  from 사슴",
+        font=ctk.CTkFont(size=11, slant="italic"),
+        text_color=Colors.TEXT_MUTED,
     )
     deer_label.pack(side="left")
 
-    # 업데이트 확인 행
     update_row = ctk.CTkFrame(card_info, fg_color="transparent")
-    update_row.pack(fill="x", padx=14, pady=(0, 10))
+    update_row.pack(fill="x", padx=14, pady=(4, 14))
 
     update_status = ctk.CTkLabel(
-        update_row,
-        text="",
-        font=ctk.CTkFont(size=11),
-        text_color=Colors.TEXT_SUB,
+        update_row, text="", font=ctk.CTkFont(size=12), text_color=Colors.TEXT_SUB
     )
     update_status.pack(side="left")
 
     def _check_update():
-        update_status.configure(text="확인 중...", text_color=Colors.TEXT_SUB)
+        update_status.configure(text="서버 확인 중...", text_color=Colors.TEXT_SUB)
         for w in update_row.winfo_children():
             if isinstance(w, ctk.CTkButton) and getattr(w, "_is_dl_btn", False):
                 w.destroy()
@@ -280,22 +297,22 @@ def build_settings_tab(app, container):
             def _update_ui():
                 if error:
                     update_status.configure(
-                        text=f"오류: {error}", text_color=Colors.ERROR
+                        text=f"확인 실패: {error}", text_color=Colors.ERROR
                     )
                 elif has_update:
                     update_status.configure(
-                        text=f"새 버전 {latest_ver} 사용 가능!",
-                        text_color=Colors.SUCCESS,
+                        text=f"새 버전 v{latest_ver} 사용 가능!",
+                        text_color=Colors.PRIMARY,
                     )
                     from ui.components.update_dialog import UpdateDialog
 
                     dl_btn = ctk.CTkButton(
                         update_row,
-                        text="다운로드 및 설치",
-                        width=120,
+                        text="업데이트 설치",
+                        width=100,
                         height=26,
                         font=ctk.CTkFont(size=11, weight="bold"),
-                        fg_color=Colors.ACCENT,
+                        fg_color=Colors.PRIMARY,
                         hover_color=Colors.ACCENT_HOVER,
                         text_color="white",
                         corner_radius=4,
@@ -307,7 +324,7 @@ def build_settings_tab(app, container):
                     dl_btn.pack(side="right", padx=(8, 0))
                 else:
                     update_status.configure(
-                        text=f"최신 버전입니다. (v{APP_VERSION})",
+                        text="이미 최신 버전을 사용 중입니다.",
                         text_color=Colors.SUCCESS,
                     )
 

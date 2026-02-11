@@ -18,6 +18,7 @@ class SmoothScrollFrame(ctk.CTkScrollableFrame):
         self._scroll_anim_id = None
         self._friction = 0.82
         self._scroll_pixels = 30  # 휠 한 틱당 픽셀
+        self.scroll_enabled = True
 
     @property
     def inner(self):
@@ -26,7 +27,7 @@ class SmoothScrollFrame(ctk.CTkScrollableFrame):
 
     def _mouse_wheel_all(self, event):
         """CTkScrollableFrame 기본 스크롤을 관성 스크롤로 대체."""
-        if not self.check_if_master_is_canvas(event.widget):
+        if not self.check_if_master_is_canvas(event.widget) or not self.scroll_enabled:
             return
 
         if sys.platform.startswith("win"):
@@ -72,6 +73,31 @@ class SmoothScrollFrame(ctk.CTkScrollableFrame):
         except Exception:
             self._scroll_velocity = 0.0
             self._scroll_anim_id = None
+
+    def scroll_to_top(self):
+        """스크롤을 즉시 맨 위로 이동."""
+        try:
+            self._parent_canvas.yview_moveto(0)
+            self._scroll_velocity = 0.0
+        except Exception:
+            pass
+
+    def scroll_to_widget(self, widget):
+        """특정 위젯이 보이도록 스크롤 이동."""
+        try:
+            self.update_idletasks()
+            # 캔버스 내 위젯의 상대 좌표 계산
+            w_y = widget.winfo_y()
+            c_height = self._parent_canvas.winfo_height()
+            s_height = self._parent_canvas.bbox("all")[3]  # 전체 높이
+
+            if s_height > c_height:
+                pos = w_y / s_height
+                # 약간 여유를 두어 위젯이 살짝 아래에 보이게 조정 (0.05 정도 차감)
+                self._parent_canvas.yview_moveto(max(0, pos - 0.01))
+                self._scroll_velocity = 0.0
+        except Exception:
+            pass
 
     def destroy(self):
         if self._scroll_anim_id:

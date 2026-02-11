@@ -35,7 +35,7 @@ def build_filter_tab(app, container):
         frame,
         text="조건 설정",
         font=ctk.CTkFont(size=19, weight="bold"),
-        text_color=Colors.TEXT,
+        text_color=Colors.PRIMARY,
     ).pack(padx=20, pady=(20, 12), anchor="w")
 
     scroll = ctk.CTkScrollableFrame(frame, fg_color="transparent")
@@ -62,7 +62,7 @@ def build_filter_tab(app, container):
             header_row,
             text=target["label"],
             font=ctk.CTkFont(size=16, weight="bold"),
-            text_color=Colors.ACCENT,
+            text_color=Colors.PRIMARY,
         ).pack(side="left")
 
         # 기획전 유형별 동적 UI 빌드
@@ -130,7 +130,7 @@ def build_section_layout(
             settings_area,
             text="나의 배송지 설정",
             font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=Colors.TEXT,
+            text_color=Colors.PRIMARY,
         ).pack(pady=(0, 5), anchor="w")
 
         d_row = ctk.CTkFrame(settings_area, fg_color="transparent")
@@ -165,7 +165,7 @@ def build_section_layout(
             settings_area,
             text="전기차 구매보조금 신청 지역",
             font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=Colors.TEXT,
+            text_color=Colors.PRIMARY,
         ).pack(pady=(5, 5), anchor="w")
 
         s_row = ctk.CTkFrame(settings_area, fg_color="transparent")
@@ -204,7 +204,7 @@ def build_section_layout(
     ctk.CTkButton(
         main_content,
         text="설정 저장",
-        fg_color=Colors.ACCENT,
+        fg_color=Colors.PRIMARY,
         hover_color=Colors.ACCENT_HOVER,
         width=100,
         height=32,

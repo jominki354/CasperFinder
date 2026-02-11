@@ -69,7 +69,7 @@ class VehicleCard(ctk.CTkFrame):
         super().__init__(
             parent,
             fg_color=Colors.BG_CARD,
-            corner_radius=10,
+            corner_radius=12,
             border_width=1,
             border_color=Colors.DIVIDER,
         )
@@ -89,8 +89,8 @@ class VehicleCard(ctk.CTkFrame):
         ctk.CTkLabel(
             top,
             text=f"{model} {trim}",
-            font=ctk.CTkFont(size=15, weight="bold"),
-            text_color=Colors.TEXT,
+            font=ctk.CTkFont(size=17, weight="bold"),
+            text_color=Colors.PRIMARY,
         ).pack(side="left")
         ctk.CTkLabel(
             top,
@@ -130,7 +130,7 @@ class VehicleCard(ctk.CTkFrame):
                         side="left", padx=(0, 4)
                     )
             ctk.CTkLabel(
-                row, text=name, font=ctk.CTkFont(size=11), text_color=Colors.TEXT
+                row, text=name, font=ctk.CTkFont(size=12), text_color=Colors.TEXT
             ).pack(side="left")
 
         # 수치
@@ -144,28 +144,37 @@ class VehicleCard(ctk.CTkFrame):
         for lbl, val in [
             ("출고센터", center),
             ("생산일", prod_date),
-            ("할인", format_price(discount)),
-            ("최종가격", format_price(price)),
+            ("할인액", format_price(discount)),
+            ("최종 가격", format_price(price)),
         ]:
             col = ctk.CTkFrame(ibox, fg_color="transparent")
-            col.pack(side="left", expand=True)
+            col.pack(side="left", expand=True, padx=2)
+
+            # 라벨: 더 작고 연하게
             ctk.CTkLabel(
                 col,
                 text=lbl,
-                font=ctk.CTkFont(size=11, weight="bold"),
-                text_color=Colors.TEXT_SUB,
+                font=ctk.CTkFont(size=10, weight="bold"),
+                text_color=Colors.TEXT_MUTED,
             ).pack(anchor="w")
+
+            # 색상 및 폰트 결정
+            is_price = "가격" in lbl
+            is_discount = "할인" in lbl
             v_color = (
-                Colors.SUCCESS
-                if "가격" in lbl
-                else (Colors.ERROR if "할인" in lbl and discount > 0 else Colors.TEXT)
+                Colors.PRIMARY
+                if is_price
+                else (Colors.ERROR if is_discount and discount > 0 else Colors.TEXT)
             )
+            v_font_size = 17 if is_price else 13
+
+            # 값: 크기 및 강조 조절
             ctk.CTkLabel(
                 col,
                 text=str(val),
-                font=ctk.CTkFont(size=14, weight="bold" if "가격" in lbl else "normal"),
+                font=ctk.CTkFont(size=v_font_size, weight="bold"),
                 text_color=v_color,
-            ).pack(anchor="w")
+            ).pack(anchor="w", pady=(0, 2))
 
         # ── 하단 ──
         bot = ctk.CTkFrame(inner, fg_color="transparent")
@@ -175,21 +184,22 @@ class VehicleCard(ctk.CTkFrame):
             ctk.CTkLabel(
                 bot,
                 text=f"옵션: {', '.join(opt_names)}",
-                font=ctk.CTkFont(size=11, weight="bold"),
-                text_color=Colors.TEXT_SUB,
-                wraplength=550,
+                font=ctk.CTkFont(size=14, weight="bold"),
+                text_color=Colors.PRIMARY,
+                wraplength=850,
                 justify="left",
-            ).pack(side="left")
+            ).pack(side="left", padx=(2, 0), pady=(2, 5))
         if detail_url:
             ctk.CTkButton(
                 bot,
                 text="계약하기",
-                width=70,
-                height=24,
-                font=ctk.CTkFont(size=11, weight="bold"),
-                fg_color=Colors.ACCENT,
+                width=80,
+                height=28,
+                font=ctk.CTkFont(size=12, weight="bold"),
+                fg_color=Colors.PRIMARY,
+                hover_color=Colors.ACCENT_HOVER,
                 text_color="white",
-                corner_radius=4,
+                corner_radius=6,
                 command=lambda: os.startfile(detail_url),
             ).pack(side="right")
 
