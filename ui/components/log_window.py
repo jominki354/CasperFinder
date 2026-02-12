@@ -2,6 +2,7 @@ import json
 import customtkinter as ctk
 from datetime import datetime
 from ui.theme import Colors
+from ui.utils import set_window_icon
 
 
 class LogWindow(ctk.CTkToplevel):
@@ -9,9 +10,18 @@ class LogWindow(ctk.CTkToplevel):
 
     def __init__(self, parent):
         super().__init__(parent)
+        set_window_icon(self)
 
         self.title("CasperFinder Debug Console")
-        self.geometry("1000x700")
+
+        # 화면 중앙 배치 계산
+        width, height = 1000, 700
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        self.geometry(f"{width}x{height}+{x}+{y}")
         self.configure(fg_color=Colors.BG)
 
         self.grid_columnconfigure(0, weight=1)

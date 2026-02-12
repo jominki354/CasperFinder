@@ -268,28 +268,66 @@ def do_save_all(app, targets, regions_data):
         has_subsidy = exhb_no.startswith("E") or exhb_no.startswith("D")
 
         if has_delivery:
-            s_name = vars["d_sido"].get()
-            sg_name = vars["d_sigun"].get()
+            s_name = vars["d_sido"].get().strip()
+            sg_name = vars["d_sigun"].get().strip()
+
+            # 1. 시/도 매칭 (정확 -> 유사업)
             s_obj = next(
-                (r for r in regions_data["delivery"] if r["name"] == s_name), None
+                (r for r in regions_data["delivery"] if r["name"].strip() == s_name),
+                next(
+                    (
+                        r
+                        for r in regions_data["delivery"]
+                        if s_name in r["name"] or r["name"] in s_name
+                    ),
+                    None,
+                ),
             )
             if s_obj is not None:
+                # 2. 시/군/구 매칭 (정확 -> 유사 -> 첫 번째 항목)
                 sg_obj = next(
-                    (s for s in s_obj["siguns"] if s["name"] == sg_name), None
+                    (s for s in s_obj["siguns"] if s["name"].strip() == sg_name),
+                    next(
+                        (
+                            s
+                            for s in s_obj["siguns"]
+                            if sg_name in s["name"] or s["name"] in sg_name
+                        ),
+                        s_obj["siguns"][0] if s_obj["siguns"] else None,
+                    ),
                 )
                 if sg_obj is not None:
                     target["deliveryAreaCode"] = s_obj["code"]
                     target["deliveryLocalAreaCode"] = sg_obj["code"]
 
         if has_subsidy:
-            ss_name = vars["s_sido"].get()
-            ssg_name = vars["s_sigun"].get()
+            ss_name = vars["s_sido"].get().strip()
+            ssg_name = vars["s_sigun"].get().strip()
+
+            # 1. 보조금 시/도 매칭
             ss_obj = next(
-                (r for r in regions_data["subsidy"] if r["name"] == ss_name), None
+                (r for r in regions_data["subsidy"] if r["name"].strip() == ss_name),
+                next(
+                    (
+                        r
+                        for r in regions_data["subsidy"]
+                        if ss_name in r["name"] or r["name"] in ss_name
+                    ),
+                    None,
+                ),
             )
             if ss_obj is not None:
+                # 2. 보조금 시/군/구 매칭
                 ssg_obj = next(
-                    (s for s in ss_obj["siguns"] if s["name"] == ssg_name), None
+                    (s for s in ss_obj["siguns"] if s["name"].strip() == ssg_name),
+                    next(
+                        (
+                            s
+                            for s in ss_obj["siguns"]
+                            if ssg_name in s["name"] or s["name"] in ssg_name
+                        ),
+                        ss_obj["siguns"][0] if ss_obj["siguns"] else None,
+                    ),
                 )
                 if ssg_obj is not None:
                     target["subsidyRegion"] = ssg_obj["code"]

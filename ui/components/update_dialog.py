@@ -5,6 +5,7 @@ GitHub Releases 기반 업데이트 확인/다운로드/설치 UI를 독립 모�
 import customtkinter as ctk
 from datetime import datetime, timedelta
 from ui.theme import Colors
+from ui.utils import set_window_icon
 from core.version import APP_VERSION
 from core.updater import check_update, download_update, run_installer_and_exit
 from core.config import load_config, save_config
@@ -53,6 +54,7 @@ class UpdateDialog:
         """업데이트 알림 다이얼로그 표시."""
         dialog = ctk.CTkToplevel(self.parent)
         dialog.title("업데이트")
+        set_window_icon(dialog)
         dialog.attributes("-topmost", True)
         dialog.resizable(False, False)
         dialog.configure(fg_color=Colors.BG_CARD)

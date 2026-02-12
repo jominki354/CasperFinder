@@ -28,8 +28,8 @@ from core.auth import casper_auth
 from ui.filter_logic import update_filter, get_filter_values
 from ui.components.dialogs import CenteredConfirmDialog
 from ui.components.update_dialog import UpdateDialog
-from ui.components.notifier import show_notification
 from ui.components.log_window import LogWindow
+from ui.utils import set_window_icon
 
 # Mixin 모듈
 from ui.top_bar import TopBarMixin
@@ -68,12 +68,7 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
         ctk.set_default_color_theme("blue")
 
         # ── 아이콘 설정 ──
-        ico_path = os.path.join(str(BASE_DIR), "assets", "app_icon.ico")
-        if os.path.exists(ico_path):
-            try:
-                self.iconbitmap(ico_path)
-            except Exception:
-                pass
+        set_window_icon(self, is_main=True)
 
         # ── 엔진 ──
         self.engine = PollingEngine()
@@ -190,6 +185,8 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
         else:
             self.after(2000, self.deiconify)
 
+        # ── 업데이트 확인 ──
+        # 스플래시(2초) 종료 후 창이 뜨고 나서 약 3초 뒤에 확인
         self.after(5000, self._check_update_on_start)
 
         if app_settings.get("autoSearch", True):
@@ -237,7 +234,10 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
 
     def _hide_to_tray(self):
         self.withdraw()
-        if not self._tray_notified:
+        # 기존 토스트 알림 (인앱)
+        from ui.components.notifier import show_notification
+
+        if not getattr(self, "_tray_notified", False):
             self.after(300, lambda: show_notification("트레이로 실행중입니다!"))
             self._tray_notified = True
 

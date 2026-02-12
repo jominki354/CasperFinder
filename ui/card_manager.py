@@ -61,7 +61,14 @@ class CardManagerMixin:
 
         if not self.vehicles_found:
             if self.card_scroll and self.card_scroll.winfo_exists():
+                self.card_scroll.scroll_to_top()
                 self.card_scroll.scroll_enabled = False
+                # 강제로 스크롤 영역 리셋 (스크롤바 잔상 제거)
+                try:
+                    self.card_scroll._parent_canvas.configure(scrollregion=(0, 0, 0, 0))
+                    self.card_scroll.update_idletasks()
+                except Exception:
+                    pass
             from ui.pages.alert_page import show_empty_msg
 
             show_empty_msg(self)
@@ -70,7 +77,13 @@ class CardManagerMixin:
         sorted_list = sort_vehicles(self.vehicles_found, self.sort_key, self.filters)
         if not sorted_list:
             if self.card_scroll and self.card_scroll.winfo_exists():
+                self.card_scroll.scroll_to_top()
                 self.card_scroll.scroll_enabled = False
+                try:
+                    self.card_scroll._parent_canvas.configure(scrollregion=(0, 0, 0, 0))
+                    self.card_scroll.update_idletasks()
+                except Exception:
+                    pass
             from ui.pages.alert_page import show_empty_msg
 
             show_empty_msg(self)
@@ -100,6 +113,10 @@ class CardManagerMixin:
         if total_pages > 1:
             bar_parent = getattr(self, "pagination_container", parent)
             self._render_page_bar(bar_parent, total_pages, total)
+
+        # 렌더링 완료 후 레이아웃 즉시 갱신 (스크롤바 크기 조정)
+        if self.card_scroll and self.card_scroll.winfo_exists():
+            self.card_scroll.update_idletasks()
 
     def _render_page_bar(self, parent, total_pages, total_items):
         """페이지 네비게이션 바를 렌더링."""

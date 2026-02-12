@@ -11,6 +11,7 @@ API 클라이언트 모듈
 
 import json
 import logging
+import time
 import aiohttp
 import asyncio
 
@@ -18,11 +19,9 @@ log = logging.getLogger("CasperFinder")
 
 
 def build_url(api_config, exhb_no):
-    """API 요청 URL 생성.
-
-    현재: GET /gw/wp/product/v2/product/exhibition/cars/{exhbNo}
-    """
-    return f"{api_config['baseUrl']}/{exhb_no}"
+    """API 요청 URL 생성 (Cache-Busting 타임스탬프 추가)."""
+    ts = int(time.time() * 1000)
+    return f"{api_config['baseUrl']}/{exhb_no}?t={ts}"
 
 
 def build_payload(api_config, exhb_no, target_overrides=None):

@@ -11,16 +11,21 @@ import logging
 from pathlib import Path
 
 # --- 경로 상수 ---
+import sys
+
 # BASE_DIR: 실행 파일 또는 소스 코드가 있는 위치 (읽기 전용 에셋용)
-BASE_DIR = Path(__file__).parent.parent
+if getattr(sys, "frozen", False):
+    # PyInstaller 빌드 환경
+    BASE_DIR = Path(sys._MEIPASS)
+else:
+    # 개발(소스 코드) 환경
+    BASE_DIR = Path(__file__).parent.parent
 
 # APP_DATA_DIR: 사용자의 쓰기 권한이 보장되는 폴더 (%LOCALAPPDATA%/CasperFinder)
-# Windows: C:/Users/사용자/AppData/Local/CasperFinder
 LOCAL_APP_DATA = os.getenv("LOCALAPPDATA")
 if LOCAL_APP_DATA:
     APP_DATA_DIR = Path(LOCAL_APP_DATA) / "CasperFinder"
 else:
-    # fallback (비윈도우 환경 대비)
     APP_DATA_DIR = Path.home() / ".casperfinder"
 
 # 가변 데이터 경로 (APP_DATA_DIR 사용)
@@ -35,8 +40,8 @@ DEFAULT_CONFIG = {
         {
             "exhbNo": "E20260277",
             "label": "특별기획전",
-            "deliveryAreaCode": "B",
-            "deliveryLocalAreaCode": "B0",
+            "deliveryAreaCode": "T",
+            "deliveryLocalAreaCode": "T1",
             "subsidyRegion": "1100",
         },
         {
@@ -47,26 +52,33 @@ DEFAULT_CONFIG = {
         {
             "exhbNo": "R0003",
             "label": "리퍼브",
-            "deliveryAreaCode": "B",
-            "deliveryLocalAreaCode": "B0",
+            "deliveryAreaCode": "T",
+            "deliveryLocalAreaCode": "T1",
+            "subsidyRegion": "",
         },
     ],
     "appSettings": {
-        "autoStart": False,
-        "startMinimized": False,
         "soundEnabled": True,
-        "soundVolume": 80,
+        "volume": 0.5,
+        "autoStartPolling": False,
+        "startAtTray": False,
+        "autoStartWithWindows": False,
+        "checkUpdateOnStart": True,
+        "updateDismissUntil": "",
     },
     "lastState": {
         "lastTab": 0,
         "geometry": "1024x720+300+150",
     },
-    "pollInterval": 5,
+    "pollInterval": 3,
     "api": {
         "baseUrl": "https://casper.hyundai.com/gw/wp/product/v2/product/exhibition/cars",
         "headers": {
             "Content-Type": "application/json;charset=utf-8",
             "Accept": "application/json, text/plain, */*",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
             "ep-channel": "wpc",
             "ep-version": "v2",
             "service-type": "product",
@@ -76,20 +88,12 @@ DEFAULT_CONFIG = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         },
         "defaultPayload": {
-            "carCode": "",
-            "subsidyRegion": "",
-            "sortCode": "10",
-            "deliveryAreaCode": "",
-            "deliveryLocalAreaCode": "",
-            "carBodyCode": "",
-            "carEngineCode": "",
-            "carTrimCode": "",
-            "exteriorColorCode": "",
-            "interiorColorCode": [],
-            "deliveryCenterCode": "",
-            "wpaScnCd": "",
-            "optionFilter": "",
+            "subsidyRegion": "1100",
             "choiceOptYn": "Y",
+            "carCode": "",
+            "sortCode": "10",
+            "deliveryAreaCode": "T",
+            "deliveryLocalAreaCode": "T1",
             "pageNo": 1,
             "pageSize": 100,
         },
@@ -145,7 +149,7 @@ def load_config():
     # --- 핵심 코드 강제 업데이트 로직 (버전/기획전 코드 등) ---
     needs_save = False
 
-    # 1. 기획전 코드 동기화
+    # 1. 기획전 코드 동기화 + 타입별 필드 정리
     for i, def_t in enumerate(DEFAULT_CONFIG["targets"]):
         if i < len(config.get("targets", [])):
             curr_t = config["targets"][i]
@@ -153,6 +157,22 @@ def load_config():
             if curr_t.get("exhbNo") != def_t["exhbNo"]:
                 curr_t["exhbNo"] = def_t["exhbNo"]
                 needs_save = True
+
+            # 기획전 타입에 따라 불필요한 필드 강제 정리
+            exhb = curr_t.get("exhbNo", "")
+            # R(리퍼브): 보조금 설정 없음 → subsidyRegion 강제 비움
+            if exhb.startswith("R"):
+                if curr_t.get("subsidyRegion", "") != "":
+                    curr_t["subsidyRegion"] = ""
+                    needs_save = True
+            # D(전시차): 배송지 설정 없음 → deliveryArea 강제 비움
+            if exhb.startswith("D"):
+                if curr_t.get("deliveryAreaCode", "") != "":
+                    curr_t["deliveryAreaCode"] = ""
+                    needs_save = True
+                if curr_t.get("deliveryLocalAreaCode", "") != "":
+                    curr_t["deliveryLocalAreaCode"] = ""
+                    needs_save = True
 
     # 2. defaultPayload 동기화
     payload = config.get("api", {}).get("defaultPayload", {})

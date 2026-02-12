@@ -2,12 +2,14 @@
 
 import customtkinter as ctk
 from ui.theme import Colors
+from ui.utils import set_window_icon
 
 
 class CenteredConfirmDialog(ctk.CTkToplevel):
     def __init__(self, parent, title="확인", message="", on_confirm=None):
         super().__init__(parent)
         self.title(title)
+        set_window_icon(self)
         self.on_confirm = on_confirm
 
         # 데코레이션 제거 및 항상 위에 표시

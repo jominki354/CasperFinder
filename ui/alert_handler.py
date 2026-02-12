@@ -7,14 +7,12 @@ import os
 import ctypes
 import webbrowser
 from datetime import datetime
-import customtkinter as ctk
 
-from ui.theme import Colors
 from ui.components.notifier import show_notification
 from ui.filter_logic import sort_vehicles, passes_filter
 from core.formatter import format_vehicle_summary, format_price
 from core.storage import load_history, save_history
-from core.config import load_config, BASE_DIR
+from core.config import BASE_DIR
 from core.sound import play_alert
 
 
@@ -148,6 +146,7 @@ class AlertHandlerMixin:
             return
         pending = self._pending_alerts
         self._pending_alerts = []
+
         if len(pending) == 1:
             vehicle, label, car_id = pending[0]
             price_str = format_price(vehicle.get("price", 0))
