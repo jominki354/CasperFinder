@@ -23,3 +23,19 @@
 ```bash
 python main.py
 ```
+
+## 빌드 도구
+- **PyInstaller**: `pyinstaller --noconfirm CasperFinder.spec`
+- **Inno Setup (ISCC)**: `C:\Users\jomin\AppData\Local\Programs\Inno Setup 6\ISCC.exe`
+  ```powershell
+  & "C:\Users\jomin\AppData\Local\Programs\Inno Setup 6\ISCC.exe" installer.iss
+  ```
+- **출력**: `installer_output/CasperFinder-Setup-v{버전}.exe`
+
+## 차종 코드 매핑
+| 코드 | 차종 | 비고 |
+|------|------|------|
+| AX05 | 캐스퍼 일렉트릭 | 메인 대상 |
+| AX06 | 캐스퍼 일렉트릭 (변형) | 메인 대상 |
+| ~~AX03~~ | ~~2026 캐스퍼 (가솔린)~~ | 제거됨 |
+| ~~AXEV~~ | ~~구형 코드~~ | 제거됨 |

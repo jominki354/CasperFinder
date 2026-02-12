@@ -213,7 +213,7 @@ def apply_to_ui(target, vars, regions_data, config, d_cb, s_cb):
 
         sido = next(
             (r for r in regions_data["delivery"] if r["code"] == d_code),
-            regions_data["delivery"][0],
+            regions_data["delivery"][0],  # 기본값: 전국
         )
         vars["d_sido"].set(sido["name"])
 
@@ -242,6 +242,7 @@ def apply_to_ui(target, vars, regions_data, config, d_cb, s_cb):
             s_cb.configure(values=[s["name"] for s in found_sido["siguns"]])
             vars["s_sigun"].set(found_sigun["name"])
         else:
+            # 매칭 실패 시 "전국" 선택
             vars["s_sido"].set(regions_data["subsidy"][0]["name"])
             s_cb.configure(
                 values=[s["name"] for s in regions_data["subsidy"][0]["siguns"]]
@@ -272,11 +273,11 @@ def do_save_all(app, targets, regions_data):
             s_obj = next(
                 (r for r in regions_data["delivery"] if r["name"] == s_name), None
             )
-            if s_obj:
+            if s_obj is not None:
                 sg_obj = next(
                     (s for s in s_obj["siguns"] if s["name"] == sg_name), None
                 )
-                if sg_obj:
+                if sg_obj is not None:
                     target["deliveryAreaCode"] = s_obj["code"]
                     target["deliveryLocalAreaCode"] = sg_obj["code"]
 
@@ -286,11 +287,11 @@ def do_save_all(app, targets, regions_data):
             ss_obj = next(
                 (r for r in regions_data["subsidy"] if r["name"] == ss_name), None
             )
-            if ss_obj:
+            if ss_obj is not None:
                 ssg_obj = next(
                     (s for s in ss_obj["siguns"] if s["name"] == ssg_name), None
                 )
-                if ssg_obj:
+                if ssg_obj is not None:
                     target["subsidyRegion"] = ssg_obj["code"]
 
     save_config(config)

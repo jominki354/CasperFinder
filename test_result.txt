@@ -1,0 +1,27 @@
+FULL (기준)              | rsp=0000
+  제거: carCode                        | rsp=0000
+  제거: subsidyRegion                  | rsp=0000
+  제거: sortCode                       | rsp=0000
+  제거: deliveryAreaCode               | rsp=0000
+  제거: deliveryLocalAreaCode          | rsp=0000
+  제거: carBodyCode                    | rsp=0000
+  제거: carEngineCode                  | rsp=0000
+  제거: carTrimCode                    | rsp=0000
+  제거: exteriorColorCode              | rsp=0000
+  제거: interiorColorCode              | rsp=0000
+  제거: deliveryCenterCode             | rsp=0000
+  제거: wpaScnCd                       | rsp=0000
+  제거: optionFilter                   | rsp=0000
+  제거: choiceOptYn                    | rsp=0000
+  제거: pageNo                         | rsp=0000
+  제거: pageSize                       | rsp=0000
+  제거: exhbNo                         | rsp=0000
+
+--- 최소 페이로드 테스트 ---
+  exhbNo만                             | rsp=0000
+  exhbNo+carCode                      | rsp=0000
+  exhbNo+carCode+page                 | rsp=0000
+  exhbNo+carCode+choiceOpt+page       | rsp=0000
+  carCode=빈값                          | rsp=0000
+  carCode 키 없음                        | rsp=0000
+  빈 객체 {}                             | rsp=0000

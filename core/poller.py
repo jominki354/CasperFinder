@@ -22,35 +22,23 @@ from core.notifier import send_toast
 
 log = logging.getLogger("CasperFinder")
 
-# ── 가솔린 차량 필터 ──
-# 캐스퍼 일렉트릭 전용: 가솔린(AX01 등)은 제외
-_GASOLINE_KEYWORDS = ["가솔린", "gasoline", "캐스퍼 밴"]
-_ELECTRIC_CAR_CODE = "AX05"  # 캐스퍼 일렉트릭 carCode
+# ── 검색 대상 차종 코드 (화이트리스트) ──
+# 기획전당 각 코드로 개별 API 호출 후 병합
+_TARGET_CAR_CODES = ["AX05", "AX06"]
+# AX05 = 캐스퍼 일렉트릭
+# AX06 = 캐스퍼 일렉트릭 (변형)
 
 
-def _is_electric(vehicle):
-    """차량이 캐스퍼 일렉트릭인지 판별.
+def _is_target_vehicle(vehicle):
+    """차량이 모니터링 대상 차종인지 판별.
 
-    판별 우선순위:
-    1. carCode == 'AX05' → 일렉트릭 확정
-    2. carEngineCode에 'EV'/'전기' 포함 → 일렉트릭
-    3. modelNm에 가솔린 키워드 포함 → 가솔린 → 제외
-    4. 판별 불가 → 허용 (혼재 기획전 대비)
+    화이트리스트 방식: _TARGET_CAR_CODES에 포함된 carCode만 허용.
+    carCode가 없는 경우 → 허용 (누락 방지)
     """
     car_code = vehicle.get("carCode", "")
-    if car_code:
-        return car_code == _ELECTRIC_CAR_CODE
-
-    engine = vehicle.get("carEngineCode", "").upper()
-    if "EV" in engine or "전기" in engine:
-        return True
-
-    model = vehicle.get("modelNm", "").lower()
-    for kw in _GASOLINE_KEYWORDS:
-        if kw.lower() in model:
-            return False
-
-    return True  # 판별 불가 시 허용
+    if not car_code:
+        return True  # carCode 없으면 일단 허용
+    return car_code in _TARGET_CAR_CODES
 
 
 class PollingEngine:
@@ -156,29 +144,55 @@ class PollingEngine:
         api_config = config["api"]
 
         start = time.perf_counter()
-        success, vehicles, total, error = await fetch_exhibition(
-            session,
-            api_config,
-            exhb_no,
-            target_overrides=target,
-            headers_override=headers,
-        )
+
+        # ── 각 carCode별로 개별 호출 후 병합 (누락 방지) ──
+        all_vehicles = []
+        total = 0
+        last_error = None
+        any_success = False
+        code_results = []  # 로그용
+
+        for car_code in _TARGET_CAR_CODES:
+            overrides = dict(target) if target else {}
+            overrides["carCode"] = car_code
+            success, vehicles, cnt, error = await fetch_exhibition(
+                session,
+                api_config,
+                exhb_no,
+                target_overrides=overrides,
+                headers_override=headers,
+            )
+            if success:
+                any_success = True
+                all_vehicles.extend(vehicles)
+                total = max(total, cnt)
+                code_results.append(f"{car_code}:{len(vehicles)}대")
+            else:
+                last_error = error
+                code_results.append(f"{car_code}:실패")
+
         elapsed_ms = int((time.perf_counter() - start) * 1000)
 
-        if not success:
-            self._emit_log(f"[{label}] {error}")
-            return False, error
+        if not any_success:
+            self._emit_log(f"[{label}] 전체 실패 — {last_error}")
+            return False, last_error
 
+        # 중복 제거 (vehicleId 기준)
         current_ids = set()
         vehicle_map = {}
-        for v in vehicles:
-            # 가솔린 캐스퍼 제외 (일렉트릭만 허용)
-            if not _is_electric(v):
+        for v in all_vehicles:
+            if not _is_target_vehicle(v):
                 continue
             vid = extract_vehicle_id(v)
-            if vid:
+            if vid and vid not in current_ids:
                 current_ids.add(vid)
                 vehicle_map[vid] = v
+
+        # 로그: 각 코드별 결과 + 병합 결과
+        codes_summary = " | ".join(code_results)
+        self._emit_log(
+            f"[{label}] {codes_summary} → 합계 {len(current_ids)}대 ({elapsed_ms}ms)"
+        )
 
         self._diff_vehicles(exhb_no, label, current_ids, vehicle_map, total)
         return True, elapsed_ms

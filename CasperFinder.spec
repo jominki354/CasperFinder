@@ -1,37 +1,41 @@
 # -*- mode: python ; coding: utf-8 -*-
-import os
-import customtkinter
 
-# CustomTkinter 경로 확인
-ctk_path = os.path.dirname(customtkinter.__file__)
+block_cipher = None
 
-datas = [
-    ('assets', 'assets'),
-    ('constants', 'constants'),
-    (ctk_path, 'customtkinter'),
+added_files = [
+    ('assets/*', 'assets'),
+    ('constants/*', 'constants'),
+    ('config.json', '.'),
 ]
 
-if os.path.exists('config.json'):
-    datas.append(('config.json', '.'))
+# customtkinter의 경우 추가 데이터 파일이 필요할 수 있으므로 hook 처리
+from PyInstaller.utils.hooks import collect_data_files
+added_files += collect_data_files('customtkinter')
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=datas,
-    hiddenimports=[],
+    datas=added_files,
+    hiddenimports=[
+        'customtkinter',
+        'PIL.Image',
+        'asyncio',
+        'threading',
+        'aiohttp',
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
+    win_no_prefer_redirects=False,
+    win_private_assemblies=False,
+    cipher=block_cipher,
     noarchive=False,
 )
 
-pyz = PYZ(a.pure, a.zipped_data)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
-# ─── onedir 모드: CasperFinder.exe + _internal/ ───
-# PyInstaller 6.x: 지원 파일을 _internal/ 폴더에 격리
-# DLL 임시 추출 없음 → 안정적
 exe = EXE(
     pyz,
     a.scripts,
@@ -42,14 +46,13 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    upx_exclude=[],
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/app_icon.ico' if os.path.exists('assets/app_icon.ico') else None,
+    icon='assets/app_icon.ico',
 )
 
 coll = COLLECT(

@@ -53,7 +53,7 @@ def format_vehicle_text(vehicle, label):
     Returns:
         (text: str, detail_url: str)
     """
-    from core.api import build_detail_url, extract_vehicle_id
+    from core.api import build_detail_url
 
     model = get_field(vehicle, "modelNm", "carName")
     trim = get_field(vehicle, "trimNm", "trimName")
@@ -67,8 +67,7 @@ def format_vehicle_text(vehicle, label):
     opt_count, opt_names = get_option_info(vehicle)
     opt_text = "\n".join(f"  - {n}" for n in opt_names) if opt_names else "  (없음)"
 
-    vehicle_id = extract_vehicle_id(vehicle)
-    detail_url = build_detail_url(vehicle_id)
+    detail_url = build_detail_url(vehicle)
 
     text = (
         f"[{label}] 신규 차량\n"
@@ -89,14 +88,14 @@ def format_vehicle_text(vehicle, label):
 
 def format_vehicle_summary(vehicle):
     """알림 히스토리 테이블용 요약 dict 반환."""
-    from core.api import build_detail_url, extract_vehicle_id
+    from core.api import build_detail_url
 
     return {
         "model": get_field(vehicle, "modelNm", "carName"),
         "trim": get_field(vehicle, "trimNm", "trimName"),
         "center": get_field(vehicle, "poName", "deliveryCenterName"),
         "price": format_price(get_field(vehicle, "price", "carPrice", default=0)),
-        "url": build_detail_url(extract_vehicle_id(vehicle)),
+        "url": build_detail_url(vehicle),
     }
 
 

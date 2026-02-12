@@ -1,151 +1,202 @@
-# 기획전 페이지 분석 (ANALYSIS)
+# 기획전 페이지 정밀 분석 리포트
 
-## 1. 분석 대상 URL (수정됨)
-실제 차량 리스트를 조회하는 페이지는 `/vehicles/exhibition`이 아닌 `/vehicles/car-list/promotion` 경로를 사용합니다.
+> **분석 일시**: 2026-02-12 09:15 KST
+> **분석 방법**: 실제 웹사이트 브라우저 네트워크 인터셉트 + Nuxt SSR 상태 추출
+> **대상**: 3개 기획전 페이지 (특별/전시차/리퍼브)
 
-- **특별 기획전:** `https://casper.hyundai.com/vehicles/car-list/promotion?exhbNo=E20260223`
-- **전시차 기획전:** `https://casper.hyundai.com/vehicles/car-list/promotion?exhbNo=D0003`
-- **리퍼브 기획전:** `https://casper.hyundai.com/vehicles/car-list/promotion?exhbNo=R0003`
+---
 
-## 2. API 분석 결과
-브라우저 분석 결과, 클라이언트 사이드 렌더링(CSR)을 위해 다음 API를 사용합니다.
+## 1. API 엔드포인트
 
-### 2.1. 엔드포인트
-- **URL:** `https://casper.hyundai.com/api/v1/vehicles/car-list/promotion/list`
-- **Method:** `POST`
-- **Content-Type:** `application/json`
+### 1.1. 차량 목록 조회 (메인 API)
+- **URL**: `POST https://casper.hyundai.com/gw/wp/product/v2/product/exhibition/cars/{exhbNo}`
+- **사용처**: 웹 프론트엔드에서 필터 변경/페이지 전환 시 호출
+- **인증**: 불필요 (쿠키/세션 없이 외부 호출 가능, 검증 완료)
 
-### 2.2. 요청 페이로드 (Payload)
+### 1.2. 기획전 메타데이터 (BFF API)
+- **URL**: `GET https://casper.hyundai.com/api/bff/promotion/getExhibitionView?exhbNo={exhbNo}`
+- **용도**: 배너, 안내 문구, UI 구성 정보 반환 (차량 데이터 없음)
+- **비고**: SSR 전용, 외부 호출 불가 (HTML 에러 페이지 반환)
+
+### 1.3. 사용 불가 확인된 API
+- `POST /api/v1/vehicles/car-list/promotion/list` → **외부 호출 시 404 HTML 반환**
+- 이 API는 Nuxt SSR 내부에서만 동작하며, Python에서 직접 호출 불가
+
+---
+
+## 2. 요청 페이로드 구조
+
+### 2.1. 공통 필드
 ```json
 {
-  "exhbNo": "E20260223",  // 기획전 ID (가변)
-  "oderVal": 1,           // 정렬 순서 (기본값: Price Low?)
-  "pageNum": 1,           // 페이지 번호
-  "pageSize": 20,         // 요청 개수
-  "queryList": [
-    {
-      "column": "car_trim_code",
-      "value": ["C", "P"]  // 다중 선택 가능
-    },
-    {
-      "column": "ext_color_code", 
-      "value": ["A2B", "NES"]
-    }
-  ]
+  "carCode": "",          // 차종 코드 (아래 참고). 빈값이면 전체 차종 조회
+  "subsidyRegion": "",    // 보조금 지역 코드. 빈값이면 전국
+  "sortCode": "10",       // 정렬 (10=기본)
+  "deliveryAreaCode": "", // 배송 시/도 코드
+  "deliveryLocalAreaCode": "", // 배송 시/군/구 코드
+  "carBodyCode": "",
+  "carEngineCode": "",    // 엔진 필터 (V=전기, G=가솔린1.0, T=터보)
+  "carTrimCode": "",      // 트림 필터
+  "exteriorColorCode": "",// 외장색 필터
+  "interiorColorCode": [],// 내장색 필터 (배열)
+  "deliveryCenterCode": "",
+  "wpaScnCd": "",
+  "optionFilter": "",
+  "choiceOptYn": "Y",
+  "pageNo": 1,
+  "pageSize": 100,        // 최대 100 (한 번에 전체 조회)
+  "exhbNo": "E20260277"   // 기획전 번호
 }
 ```
 
-### 2.3. 응답 구조 (Response)
+### 2.2. 최대 범위 조회 전략
+**`carCode`를 빈값(`""`)으로 보내면 해당 기획전의 모든 차종이 반환됨.**
+이는 가장 누락 없는 모니터링 방식이며, 가솔린/전기차를 별도 분류할 필요 없이 전체 목록을 받을 수 있음.
+
+---
+
+## 3. 기획전별 상세 분석
+
+### 3.1. 특별 기획전 (`E20260277`)
+
+| 항목 | 값 |
+|:---|:---|
+| **기본 carCode** | `ax05` (캐스퍼 일렉트릭) |
+| **엔진 필터** | `V` (전기모터) — EV 전용 |
+| **트림 코드** | `K` (크로스), `P` (프리미엄), `C` (인스퍼레이션) |
+| **외장색 코드** | `A2B` (어비스 블랙 펄), `NES` (언블리치드 아이보리), `SAW` (아틀라스 화이트), `T4M` (실버 매트) 등 |
+| **옵션 코드** | `AXE5P01` (선루프), `AXE5052` (루프랙), `AXE5022` (스마트 크루즈 컨트롤), `AXE5104` (스마트폰 무선충전) |
+
+### 3.2. 전시차 기획전 (`D0003`)
+
+| 항목 | 값 |
+|:---|:---|
+| **기본 carCode** | `ax05` (캐스퍼 일렉트릭) |
+| **엔진 필터** | `V` (전기모터) — EV 전용 |
+| **트림 코드** | `K` (크로스), `P` (프리미엄), `C` (인스퍼레이션) |
+| **외장색 코드** | 특별기획전과 동일 |
+| **🆕 전시지역 필터** | 아래 표 참조 |
+
+#### 전시지역 코드 매핑 (D0003 전용)
+| 코드 | 지역 | 코드 | 지역 |
+|:---|:---|:---|:---|
+| `B` | 서울 | `M` | 대구 |
+| `D` | 인천 | `N` | 경북 |
+| `E` | 경기 | `P` | 부산 |
+| `F` | 강원 | `S` | 경남 |
+| `W` | 세종 | `U` | 울산 |
+| `I` | 충남 | `J` | 전북 |
+| `H` | 대전 | `L` | 전남 |
+| `G` | 충북 | `K` | 광주 |
+| `T` | 제주 | | |
+
+### 3.3. 리퍼브 기획전 (`R0003`)
+
+| 항목 | 값 |
+|:---|:---|
+| **기본 carCode** | **`ax06`** ⚠️ 가솔린 캐스퍼 (다른 기획전과 다름!) |
+| **엔진 필터** | `G` (가솔린 1.0), `T` (가솔린 1.0 터보) — 가솔린 전용 |
+| **트림 코드** | `A` (스마트), `H` (스마트 초이스), `D` (디 에센셜), `C` (인스퍼레이션) |
+| **옵션 코드** | `AX05P01`, `AX05037` 등 (AX05 계열) |
+
+---
+
+## 4. carCode 매핑 총정리
+
+| carCode | 차종 | 사용 기획전 |
+|:---|:---|:---|
+| `ax05` (= `AX05`) | 2026 캐스퍼 일렉트릭 (The New Casper Electric) | E20260277, D0003 |
+| `ax06` (= `AX06`) | 2026 캐스퍼 (가솔린, The New Casper) | R0003 |
+| `AXEV` | ❌ 구 코드 (현재 서버에서 미인식 가능) | 사용하지 않음 |
+| `""` (빈값) | 전체 차종 (가솔린 + 전기차 모두) | 모든 기획전 |
+
+### ⚠️ 중요 결론
+- **`carCode`를 빈값으로 보내면 기획전 내 모든 차종을 한 번에 조회 가능**
+- 기획전마다 기본 carCode가 다르므로, 하나의 코드로 통일하면 특정 기획전에서 차량을 놓칠 수 있음
+- **최대 범위 검색 = `carCode: ""`**
+
+---
+
+## 5. 응답 구조
+
+### 5.1. 성공 응답
 ```json
 {
-  "totalCount": 10,       // 전체 차량 수
-  "discountsearchcars": [ // 차량 리스트
-    {
-      "vehicleId": "...",    // 차량 고유 ID (중요)
-      "carName": "Casper",   // 모델명
-      "trimCode": "C",       // 트림 코드 (Inspiration)
-      "carPrice": 18000000,  // 원래 가격
-      "discountPrice": 16000000, // 할인가
-      "saleStat": "SL"       // 판매 상태
-    }
-  ]
+  "data": {
+    "totalCount": 3,
+    "discountsearchcars": [
+      {
+        "vehicleId": "...",
+        "carCode": "AX05",
+        "modelNm": "2026 캐스퍼 일렉트릭",
+        "trimNm": "인스퍼레이션",
+        "poName": "신갈출고센터",
+        "productionDate": "2026-01-15",
+        "extCrNm": "어비스 블랙 펄",
+        "intCrNm": "다크 그레이 (인조가죽)",
+        "price": 28000000,
+        "crDscntAmt": 300000,
+        "optionList": [...],
+        "optionCount": 3,
+        "faclName": "광주글로벌모터스"
+      }
+    ]
+  },
+  "rspStatus": {
+    "rspCode": "0000",
+    "rspMessage": "성공"
+  }
 }
 ```
 
-## 3. 필터 및 데이터 소스 (상세)
-각 기획전의 필터 정보(모델, 트림, 색상, 옵션)는 **Global State**에서 동적으로 제공됩니다.
+### 5.2. 차량 상세 페이지 URL 패턴
+```
+https://casper.hyundai.com/vehicles/car-list/detail
+  ?criterionYearMonth={YYYYMM}
+  &carProductionNumber={생산번호}
+  &exhbNo={기획전번호}
+```
+- 현재 코드의 `build_detail_url()`은 `vehicleId` 기반이지만, 실제 웹사이트는 위 패턴 사용
+- **구매 바로가기**: `https://casper.hyundai.com/vehicles/detail?vehicleId={vehicleId}` (이것도 유효)
 
-- **필터 데이터:** `window.__NUXT__.state.promotionModules.exhibitionFilterList`
-- **구조:**
-  - `trimFilter`: 트림 코드(`K`, `P`, `C`) 매핑
-  - `exteriorColorFilter`: 외장 색상 코드(`A2B`, `NES` 등) 매핑
-  - `optionFilter`: 옵션 코드(`AXE...`) 매핑
+---
 
-### 3.1. 필터 코드 매핑 예시 (E20260223)
-| 구분 | 한글명 | 코드 (API 값) |
-| :--- | :--- | :--- |
-| **트림** | 크로스 (Cross) | `K` |
-| | 프리미엄 (Premium) | `P` |
-| | 인스퍼레이션 (Inspiration) | `C` |
-| **외장색상** | 어비스 블랙 펄 | `A2B` |
-| | 언블리치드 아이보리 | `NES` |
-| **옵션** | 선루프 | `AXE5P01` |
-| | 스마트폰 무선충전 | `AXE5104` |
+## 6. 필수 요청 헤더
 
-## 4. 모니터링 및 구현 전략 (확정)
+```
+Content-Type: application/json;charset=utf-8
+ep-channel: wpc
+ep-version: v2
+service-type: product
+x-b3-sampled: 1
+Referer: https://casper.hyundai.com/vehicles/car-list/promotion
+Origin: https://casper.hyundai.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+```
 
-### 4.1. 배송 지역 (Region) 필수 설정
-차량 리스트 조회는 **배송 지역 쿠키**가 설정되어 있어야 정상 동작합니다.
-- **필요 쿠키:** `siDoData`, `siGunData`, `regionData`
-- **전략:** 
-  1. 최초 1회 브라우저(Puppeteer)를 통해 "배송지역 변경" 실행 및 쿠키 획득.
-  2. 이후 API 호출 시 획득한 쿠키를 헤더에 포함하여 전송.
+---
 
-### 4.2. 데이터 수집 루틴
-1. **필터 초기화:** 주기적으로 페이지에 접속하여 `window.__NUXT__`에서 최신 `exhibitionFilterList` 파싱 (신규 옵션/색상 감지).
-2. **차량 검색:** 사용자가 설정한 조건에 맞춰 `queryList` 구성 후 API 호출.
-3. **변경 감지:** 이전 검색 결과의 `vehicleId` 목록과 비교하여 신규 차량 알림.
+## 7. 모니터링 최적 설정 (권장)
 
-## 6. 타사 봇 동작 원리 및 최적화 전략 (추가 분석)
-기존 텔레그램 봇들의 동작 방식을 역공학한 결과, 다음과 같은 단순화된 로직을 사용하는 것으로 파악됩니다.
+```json
+{
+  "carCode": "",
+  "subsidyRegion": "",
+  "sortCode": "10",
+  "deliveryAreaCode": "",
+  "deliveryLocalAreaCode": "",
+  "choiceOptYn": "Y",
+  "pageNo": 1,
+  "pageSize": 100
+}
+```
 
-### 6.1. 데이터 수집 로직
-- **광범위 조회:** `queryList: []` (빈 배열)을 전송하여 필터링 없이 전체 차량 리스트를 한 번에 조회합니다.
-- **지역 쿠키:** 특정 지역(예: 서울) 쿠키를 고정적으로 사용하여 API 통과를 위한 최소 조건을 충족시킵니다. (전기차는 보조금 영향으로 지역별 재고 상이할 수 있음 주의)
+- `carCode: ""` → 가솔린/전기차 모두 포함
+- `subsidyRegion: ""` → 전국
+- `deliveryAreaCode: ""` → 배송지 무관
+- `pageSize: 100` → 한 번에 전체 조회
 
-### 6.2. 필드 매핑 및 메시지 구성
-API 응답(`discountsearchcars`) 내의 필드를 봇 메시지에 직접 매핑합니다.
+---
 
-| 봇 메시지 항목 | API 필드명 | 설명 |
-| :--- | :--- | :--- |
-| **모델명** | `modelNm` | 예: "2026 캐스퍼 일렉트릭" |
-| **출고센터** | `poName` | 예: "신갈출고센터", "담양출고센터" |
-| **생산일** | `productionDate` | YYYY-MM-DD 형식 |
-| **외장색상** | `extCrNm` | |
-| **내장색상** | `intCrNm` | |
-| **가격/할인** | `price` / `crDscntAmt` | |
-| **옵션** | `optionList` / `optionCount` | 상세 옵션 명칭 및 갯수 포함 |
-| **공장** | `faclName` | 생산 공장명 (광주글로벌모터스 등) |
-
-### 6.3. 구매 링크 생성
-별도의 지역 검증 없이 바로 구매 페이지로 연결되는 링크를 제공합니다.
-- **URL 패턴:** `https://casper.hyundai.com/vehicles/detail?vehicleId={vehicleId}`
-- *참고: 실제 결제 단계에서는 로그인이 필요하지만, 차량 상세 확인은 링크만으로 가능할 수 있음.*
-
-### 6.4. 최적화된 모니터링 시나리오 (제안)
-1. **세션 초기화:** Puppeteer로 "서울" 기준 지역 쿠키 1회 획득.
-2. **반복 호출:** `fetch`로 `queryList: []` payload 전송.
-3. **Diff Check:** 메모리에 저장된 `vehicleId` 목록과 비교하여 신규 ID 발생 시 알림 발송.
-4. **장점:** 복잡한 필터링 로직 없이 모든 재고를 한 번에 파악 가능.
-
-## 7. 기획전별 상세 서브구조 및 네비게이션 로직 (심층 분석)
-각 기획전(`exhbNo`)은 공통된 API를 사용하지만, 페이지 내 서브 메뉴와 필터 동작 방식 그 외 숨겨진 파라미터가 상이합니다.
-
-### 7.1. 특별 기획전 - Special (`E20260223`)
-- **구조:** 단일 페이지 내에서 **모델 선택 라디오 버튼**으로 동작.
-- **동작 로직:** 
-  - 상단 탭이나 페이지 이동이 아님.
-  - "2026 캐스퍼" 클릭 시 `exhbNo` 변경 없이 API `queryList`에 `car_name` 또는 `car_type` 관련 필터만 추가됨.
-- **모니터링 포인트:** 
-  - 기본 상태에서는 모든 모델이 조회되므로, 굳이 모델별로 나눠서 호출할 필요 없음.
-  - `queryList: []` 호출 시 캐스퍼/캐스퍼 일렉트릭 모두 포함된 전체 리스트 반환됨.
-
-### 7.2. 전시차 - Display (`D0003`)
-- **핵심 필터:** **전시 지역(Exhibition Area) 및 지점**
-  - UI 상단에는 지역(서울, 경기 등) 선택 탭이 존재하지 않으나, 필터 사이드바 하단에 **"전시지역"** 섹션이 활성화됨.
-- **데이터 구조:** `exhibitionFilterList` 내에 `stockAreaList` 또는 `filterAreaList`로 지역 코드 제공.
-- **특이사항:** 
-  - 전시차는 "배송" 개념보다 "위치" 개념이 강함.
-  - API 호출 시 `delivery_center` 대신 `display_branch` 코드가 사용될 수 있음.
-
-### 7.3. 리퍼브 - Refurbished (`R0003`)
-- **핵심 필터:** **출고 센터(Delivery Center)** 및 **품질 등급(Quality Grade)**
-- **데이터 은닉:**
-  - 현재 UI에는 등급 탭이 보이지 않을 수 있으나(재고 0인 경우), 내부적으로 `quality_grade` (A급, B급 등) 필터 로직이 존재함.
-  - `window.__NUXT__` 상태에서 `deliveryCenterFilter`를 통해 각 출고센터(옥천, 신갈 등)별 재고 확인 가능.
-- **모니터링 전략:** 
-  - 등급 무관 전체 조회가 유리함.
-  - 리퍼브 차량은 `saleStat` 외에도 `car_damage_desc` (손상 내역) 같은 추가 필드가 응답에 포함될 수 있음.
-
-### 7.4. 통합 모니터링 결론
-모든 기획전 페이지는 **`exhbNo`만 다를 뿐, API 엔드포인트와 응답 구조는 동일**합니다. 복잡한 UI 탭/필터를 시뮬레이션할 필요 없이, **API에 `queryList: []`를 전송**하면 각 기획전의 **모든 서브 카테고리(모델/지역/등급) 데이터를 한 번에 수집**할 수 있습니다.
+## 변경 이력
+- 2026-02-12: 실제 웹사이트 네트워크 인터셉트 기반으로 전면 재작성

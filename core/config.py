@@ -76,11 +76,11 @@ DEFAULT_CONFIG = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
         },
         "defaultPayload": {
-            "carCode": "AXEV",
-            "subsidyRegion": "2600",
-            "sortCode": "50",
-            "deliveryAreaCode": "B",
-            "deliveryLocalAreaCode": "B0",
+            "carCode": "",
+            "subsidyRegion": "",
+            "sortCode": "10",
+            "deliveryAreaCode": "",
+            "deliveryLocalAreaCode": "",
             "carBodyCode": "",
             "carEngineCode": "",
             "carTrimCode": "",
@@ -154,12 +154,26 @@ def load_config():
                 curr_t["exhbNo"] = def_t["exhbNo"]
                 needs_save = True
 
-    # 2. 기본 차종 코드 동기화 (전기차 AXEV 강제 등)
-    def_car = DEFAULT_CONFIG["api"]["defaultPayload"]["carCode"]
-    curr_car = config.get("api", {}).get("defaultPayload", {}).get("carCode")
-    if curr_car != def_car:
-        config["api"]["defaultPayload"]["carCode"] = def_car
-        needs_save = True
+    # 2. defaultPayload 동기화
+    payload = config.get("api", {}).get("defaultPayload", {})
+
+    # 2a. 항상 강제 초기화 (poller에서 carCode별 개별 호출하므로)
+    force_keys = {"carCode": "", "sortCode": "10"}
+    for key, val in force_keys.items():
+        if payload.get(key) != val:
+            payload[key] = val
+            needs_save = True
+
+    # 2b. 키가 없을 때만 기본값 보충 (사용자 설정 존중)
+    optional_keys = {
+        "subsidyRegion": "",
+        "deliveryAreaCode": "",
+        "deliveryLocalAreaCode": "",
+    }
+    for key, val in optional_keys.items():
+        if key not in payload:
+            payload[key] = val
+            needs_save = True
 
     if needs_save:
         save_config(config)

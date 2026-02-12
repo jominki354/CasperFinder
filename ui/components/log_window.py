@@ -53,13 +53,17 @@ class LogWindow(ctk.CTkToplevel):
 
         self.tab_general = self.tabview.add("일반 로그")
         self.tab_api = self.tabview.add("API 원본 로그")
+        self.tab_auth = self.tabview.add("인증 및 자동화 로그")
 
         self.log_area_general = self._create_log_area(self.tab_general)
         self.log_area_api = self._create_log_area(self.tab_api)
+        self.log_area_auth = self._create_log_area(self.tab_auth)
 
         # ── 색상 태그 설정 ──
         # API 탭 전용 색상
         self._setup_tags(self.log_area_api)
+        # 인증 탭 전용 색상
+        self._setup_tags(self.log_area_auth)
         # 일반 탭 전용 색상
         self._setup_tags(self.log_area_general)
 
@@ -104,6 +108,10 @@ class LogWindow(ctk.CTkToplevel):
             area = self.log_area_api
             content = message[5:].strip()
             self._append_rich_api_log(area, timestamp, content)
+        elif message.startswith("[Auth]") or message.startswith("[Automation]"):
+            area = self.log_area_auth
+            self._append_text_with_tag(area, f"[{timestamp}] ", "timestamp")
+            self._append_text_with_tag(area, f"{message}\n", None)
         else:
             area = self.log_area_general
             self._append_text_with_tag(area, f"[{timestamp}] ", "timestamp")
@@ -132,7 +140,7 @@ class LogWindow(ctk.CTkToplevel):
                 display_text = (
                     f"{prefix}\n{json.dumps(parsed, indent=2, ensure_ascii=False)}\n"
                 )
-            except:
+            except Exception:
                 pass  # 파싱 실패 시 원본 그대로 출력
         elif content.startswith("!!!"):
             tag = "error"
@@ -160,7 +168,7 @@ class LogWindow(ctk.CTkToplevel):
         area.configure(state="disabled")
 
     def _clear_all_logs(self):
-        for area in [self.log_area_general, self.log_area_api]:
+        for area in [self.log_area_general, self.log_area_api, self.log_area_auth]:
             area.configure(state="normal")
             area.delete("1.0", "end")
             area.configure(state="disabled")

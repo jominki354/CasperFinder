@@ -32,8 +32,9 @@ def build_payload(api_config, exhb_no, target_overrides=None):
     """
     payload = {**api_config["defaultPayload"], "exhbNo": exhb_no}
     if target_overrides:
-        # 배송지/보조금/출고센터 지역 코드 오버라이드
+        # carCode/배송지/보조금/출고센터 오버라이드
         for key in [
+            "carCode",
             "deliveryAreaCode",
             "deliveryLocalAreaCode",
             "subsidyRegion",
@@ -102,7 +103,7 @@ async def fetch_exhibition(
                 raw = json.loads(text)
                 log.info(f"[API] BODY: {json.dumps(raw, ensure_ascii=False)}")
             except json.JSONDecodeError:
-                log.info(f"[API] BODY: (Raw Text) {text[:500]}...")
+                log.info(f"[API] BODY: (Raw Text) {text[:1000]}")
                 return False, [], 0, "JSON 파싱 실패 (HTML 응답?)"
 
             if status_code != 200:
@@ -118,9 +119,25 @@ async def fetch_exhibition(
     return parse_response(raw)
 
 
-def build_detail_url(vehicle_id):
-    """차량 상세/구매 페이지 URL 생성.
+def build_detail_url(vehicle, exhb_no=""):
+    """차량 상세/구매 페이지 URL 생성 (공식 패턴).
 
-    URL 패턴이 바뀌면 여기만 수정.
+    우선순위:
+    1. criterionYearMonth + carProductionNumber → 공식 리스트 상세 페이지
+    2. vehicleId → 간편 상세 페이지 (폴백)
     """
-    return f"https://casper.hyundai.com/vehicles/detail?vehicleId={vehicle_id}"
+    yymm = vehicle.get("criterionYearMonth", "") if isinstance(vehicle, dict) else ""
+    prod_no = (
+        vehicle.get("carProductionNumber", "") if isinstance(vehicle, dict) else ""
+    )
+
+    if yymm and prod_no:
+        base = "https://casper.hyundai.com/vehicles/car-list/detail"
+        url = f"{base}?criterionYearMonth={yymm}&carProductionNumber={prod_no}"
+        if exhb_no:
+            url += f"&exhbNo={exhb_no}"
+        return url
+
+    # 폴백: vehicleId 기반
+    vid = vehicle.get("vehicleId", vehicle) if isinstance(vehicle, dict) else vehicle
+    return f"https://casper.hyundai.com/vehicles/detail?vehicleId={vid}"

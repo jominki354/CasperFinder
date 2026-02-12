@@ -1,6 +1,16 @@
 {
     "delivery": [
         {
+            "name": "전국",
+            "code": "",
+            "siguns": [
+                {
+                    "name": "전체",
+                    "code": ""
+                }
+            ]
+        },
+        {
             "name": "서울",
             "code": "B",
             "siguns": [
@@ -772,6 +782,16 @@
         }
     ],
     "subsidy": [
+        {
+            "name": "전국",
+            "code": "",
+            "siguns": [
+                {
+                    "name": "전체",
+                    "code": ""
+                }
+            ]
+        },
         {
             "name": "서울",
             "code": "01",

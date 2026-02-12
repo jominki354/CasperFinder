@@ -8,6 +8,8 @@ Mixin 구조:
 
 import os
 import logging
+import asyncio
+import threading
 from datetime import datetime
 import customtkinter as ctk
 from PIL import Image
@@ -18,7 +20,11 @@ from ui.theme import Colors
 from ui.tray import TrayManager
 from ui.pages.alert_page import build_alert_tab, show_empty_msg
 from ui.pages.filter_page import build_filter_tab
+from ui.pages.login_page import build_login_page
+from ui.pages.automation_page import build_automation_page
 from ui.pages.settings_page import build_settings_tab
+from core.auth import casper_auth
+
 from ui.filter_logic import update_filter, get_filter_values
 from ui.components.dialogs import CenteredConfirmDialog
 from ui.components.update_dialog import UpdateDialog
@@ -90,6 +96,13 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
             "int": "내장색상",
             "opt": ["옵션"],
         }
+        self.sidebar_items = [
+            {"id": "search", "label": "차량검색", "icon": "🔍"},
+            {"id": "filter", "label": "조건설정", "icon": "⚙️"},
+            {"id": "login", "label": "로그인", "icon": "👤"},
+            {"id": "automation", "label": "자동화", "icon": "⚡"},
+            {"id": "settings", "label": "설  정", "icon": "🛠️"},
+        ]
         self._rebuild_job = None
         self._current_page = 0
         self._page_size = 10
@@ -133,6 +146,23 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
         # ── 레이아웃 ──
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
+
+        # ── 비동기 루프 드라이버 (백그라운드 스레드) ──
+        self.loop = asyncio.new_event_loop()
+
+        def drive_loop():
+            asyncio.set_event_loop(self.loop)
+            self.loop.run_forever()
+
+        self.loop_thread = threading.Thread(target=drive_loop, daemon=True)
+        self.loop_thread.start()
+
+        def start_check():
+            asyncio.run_coroutine_threadsafe(
+                casper_auth.check_login_status(), self.loop
+            )
+
+        self.after(500, start_check)
 
         self._build_nav()
         self._build_content()
@@ -253,13 +283,17 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
         ).pack(padx=12, anchor="w")
 
         self.nav_buttons = []
-        for text, idx in [("차량검색", 0), ("조건설정", 1)]:
+        for idx, item in enumerate(self.sidebar_items):
+            # 설정 메뉴는 하단에 별도로 배치하기 위해 건너뜀
+            if item["id"] == "settings":
+                continue
+
             btn_container = ctk.CTkFrame(self.nav_frame, fg_color="transparent")
             btn_container.pack(fill="x", padx=8, pady=1)
 
             btn = ctk.CTkButton(
                 btn_container,
-                text=f"  {text}",
+                text=f"  {item['label']}",
                 font=ctk.CTkFont(size=15),
                 fg_color="transparent",
                 text_color=Colors.TEXT_SUB,
@@ -271,7 +305,7 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
             )
             btn.pack(fill="x", side="left", expand=True)
 
-            if idx == 0:
+            if item["id"] == "search":
                 badge = ctk.CTkLabel(
                     btn_container,
                     text="",
@@ -293,6 +327,15 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
             fill="x", padx=12, pady=(0, 4)
         )
 
+        # 설정 버튼
+        settings_idx = next(
+            (
+                i
+                for i, item in enumerate(self.sidebar_items)
+                if item["id"] == "settings"
+            ),
+            4,
+        )
         settings_btn = ctk.CTkButton(
             self.nav_frame,
             text="  설정",
@@ -303,9 +346,10 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
             anchor="w",
             height=34,
             corner_radius=6,
-            command=lambda: self._switch_tab(2),
+            command=lambda i=settings_idx: self._switch_tab(i),
         )
         settings_btn.pack(fill="x", padx=8, pady=1)
+        self.nav_buttons.append(settings_btn)
 
         ctk.CTkFrame(self.nav_frame, height=1, fg_color=Colors.DIVIDER).pack(
             fill="x", padx=12, pady=(0, 4)
@@ -346,6 +390,10 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
         self.page_container.pack(fill="both", expand=True)
 
     def _switch_tab(self, idx):
+        # 인덱스 유효성 검사 (IndexError 방지)
+        if hasattr(self, "nav_buttons") and (idx < 0 or idx >= len(self.nav_buttons)):
+            idx = 0
+
         if self.current_tab == idx:
             return
         self.current_tab = idx
@@ -356,6 +404,7 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
         config["lastState"]["lastTab"] = idx
         save_config(config)
 
+        # 버튼 활성화 스타일 적용 (enumerate 사용으로 안전)
         for i, btn in enumerate(self.nav_buttons):
             if i == idx:
                 btn.configure(fg_color=Colors.BG_HOVER, text_color=Colors.TEXT)
@@ -371,12 +420,22 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
 
         if idx not in self.page_frames:
             page_frame = ctk.CTkFrame(self.page_container, fg_color="transparent")
-            [build_alert_tab, build_filter_tab, build_settings_tab][idx](
-                self, page_frame
-            )
-            self.page_frames[idx] = page_frame
 
-        self.page_frames[idx].pack(fill="both", expand=True)
+            # 탭별 빌더 매핑 (인자 순서 보정: f=frame, a=app)
+            builders = {
+                0: lambda f, a: build_alert_tab(a, f),
+                1: lambda f, a: build_filter_tab(a, f),
+                2: lambda f, a: build_login_page(f, a),
+                3: lambda f, a: build_automation_page(f, a),
+                4: lambda f, a: build_settings_tab(a, f),
+            }
+
+            if idx in builders:
+                builders[idx](page_frame, self)
+                self.page_frames[idx] = page_frame
+
+        if idx in self.page_frames:
+            self.page_frames[idx].pack(fill="both", expand=True)
 
     # ── 폴링 제어 ──
 
@@ -435,7 +494,7 @@ class CasperFinderApp(TopBarMixin, CardManagerMixin, AlertHandlerMixin, ctk.CTk)
     # ── 엔진 콜백 ──
 
     def _on_log(self, msg):
-        # 디버그 창에 항상 기록
+        # 디버그 컨트롤 센터(LogWindow)에 항상 기록
         if hasattr(self, "log_window") and self.log_window.winfo_exists():
             self.after(0, lambda: self.log_window.append_log(msg))
 
