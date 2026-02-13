@@ -75,6 +75,24 @@ def extract_vehicle_id(vehicle):
     return vehicle.get("vehicleId", vehicle.get("vin", ""))
 
 
+async def get_layout_hash(session, headers_base):
+    """봇 탐지 우회를 위한 동적 레이아웃 해시(X-UX-State-Key) 획득.
+
+    서버가 토큰 재사용을 감지할 수 있으므로, 캐싱 없이 매 요청마다 새로 발급받음.
+    """
+    sync_url = "https://casper.hyundai.com/gw/wp/common/v2/common/ui/layout-sync"
+    try:
+        async with session.get(sync_url, headers=headers_base, timeout=5) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                h = data.get("data", {}).get("layoutHash")
+                if h:
+                    return h
+    except Exception as e:
+        log.error(f"[API] 레이아웃 해시 획득 실패: {e}")
+    return None
+
+
 async def fetch_exhibition(
     session, api_config, exhb_no, target_overrides=None, headers_override=None
 ):
@@ -85,9 +103,25 @@ async def fetch_exhibition(
     """
     url = build_url(api_config, exhb_no)
     payload = build_payload(api_config, exhb_no, target_overrides)
-    headers = headers_override or api_config.get("headers")
 
-    # API 디버그 로그 1: 요청 정보
+    # 기본 헤더에 브라우저 필수 속성 추가
+    headers = (headers_override or api_config.get("headers")).copy()
+    headers.update(
+        {
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": f"https://casper.hyundai.com/vehicles/car-list/promotion?exhbNo={exhb_no}",
+        }
+    )
+
+    # 1. X-UX-State-Key 획득 (봇 탐지 우회 핵심)
+    layout_hash = await get_layout_hash(session, headers)
+    if layout_hash:
+        headers["X-UX-State-Key"] = layout_hash
+        log.info(f"[API] 획득한 레이아웃 해시 적용: {layout_hash}")
+    else:
+        log.warning("[API] 레이아웃 해시를 획득하지 못했습니다. 가짜 응답 가능성 있음.")
+
+    # API 디버그 로그
     log.info(f"[API] >>> REQUEST: {url}")
     log.info(f"[API] PAYLOAD: {json.dumps(payload, ensure_ascii=False)}")
 
@@ -101,6 +135,14 @@ async def fetch_exhibition(
             try:
                 raw = json.loads(text)
                 log.info(f"[API] BODY: {json.dumps(raw, ensure_ascii=False)}")
+
+                # 가짜 성공응답(data가 아예 비어있음) 체크
+                if raw.get("rspStatus", {}).get("rspCode") == "0000" and not raw.get(
+                    "data"
+                ):
+                    log.error("[API] 가짜 응답(Bot Neutralized) 감지됨. 데이터 유실.")
+                    return False, [], 0, "봇 탐지 패치 (가짜 응답)"
+
             except json.JSONDecodeError:
                 log.info(f"[API] BODY: (Raw Text) {text[:1000]}")
                 return False, [], 0, "JSON 파싱 실패 (HTML 응답?)"

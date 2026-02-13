@@ -346,3 +346,6 @@
     - `SPEC.md`: 실제 홈페이지와 동기화된 기획전별 API Payload 명세 기록.
     - v0.1.3: 모든 창 아이콘 적용 (`ui/utils.py`), 트레이 알림 버그 수정, 디스코드 봇 최신화 (`main.py` 리전 오버라이드).
 - **최종 빌드**: 모든 로직이 검증된 `CasperFinder-Setup-v0.1.3.exe` 인스톨러 생성.
+- **Cache-Busting Implemented**: API 요청 실시간성 강화를 위한 타임스탬프 파라미터 및 `no-cache` 헤더 적용 완료 (v0.1.3).
+- **Anti-Bot Bypass (X-UX-State-Key)**: 현대차의 최신 봇 탐지 패치(가짜 비어있는 응답) 우회 완료. `layout-sync` API를 통해 동적 토큰을 획득하고 30초간 캐싱하여 적용하는 로직 도입. (v0.1.4 예정). 🏁
+- **Regional Stock Isolation Analysis**: 특정 지자체(세종 등)에만 노출되는 재고 격리 현상 분석 완료. '전국 통합 API'는 없음을 확인하고, 주요 거점(서울, 세종, 제주, 경기) 순환 폴링 전략 수립. `docs/RESEARCH_REGION_API.md`에 기록. 🏁
